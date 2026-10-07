@@ -292,6 +292,14 @@ management:
     # indicator still mounts (and reports DOWN). The "d" is load-bearing.
     mongodb:
       enabled: false
+    # Topic 43 (third-party): spring-boot-starter-mail autoconfigures a mail
+    # health indicator that DIALS the SMTP host on every /actuator/health hit —
+    # with none configured it reports DOWN and the whole endpoint flips 503
+    # (caught by MiddlewarePipelineIntegrationTest). Same posture as mongodb
+    # above: the app's mail story lives behind MailPort with explicit
+    # postures, not in the aggregate health signal.
+    mail:
+      enabled: false
 
 # Topic 36 (environments) — FLAGGED APPEND: the app's own typed config,
 # constructor-bound into guide.core.AppConfig (a @ConfigurationProperties

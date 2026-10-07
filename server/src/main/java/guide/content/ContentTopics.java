@@ -7,6 +7,7 @@ import guide.content.topics.ArchitectureTopic;
 import guide.content.topics.AuthenticationTopic;
 import guide.content.topics.AuthorizationTopic;
 import guide.content.topics.BackgroundJobsTopic;
+import guide.content.topics.BestPracticesTopic;
 import guide.content.topics.CachingTopic;
 import guide.content.topics.DebuggingTopic;
 import guide.content.topics.DependencyManagementTopic;
@@ -39,6 +40,7 @@ import guide.content.topics.SpringCoreTopic;
 import guide.content.topics.SpringDataJpaTopic;
 import guide.content.topics.SqlSchemaTopic;
 import guide.content.topics.TestingTopic;
+import guide.content.topics.ThirdPartyTopic;
 import guide.content.topics.ValidationTopic;
 import guide.content.topics.WebhooksTopic;
 import java.util.List;
@@ -96,6 +98,8 @@ public final class ContentTopics {
                 PerformanceTopic.topic(),
                 ReliabilityTopic.topic(),
                 ScalingTopic.topic(),
-                ReactiveSpringTopic.topic());
+                ReactiveSpringTopic.topic(),
+                BestPracticesTopic.topic(),
+                ThirdPartyTopic.topic());
     }
 }

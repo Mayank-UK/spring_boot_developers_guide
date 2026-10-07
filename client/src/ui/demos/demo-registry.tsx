@@ -84,6 +84,8 @@ const PerfBenchDemo = lazy(() => import('./performance/perf_bench_demo'));
 const BreakerDemo = lazy(() => import('./reliability/breaker_demo'));
 const StatelessDemo = lazy(() => import('./scaling/stateless_demo'));
 const ReactiveCompareDemo = lazy(() => import('./reactive/compare_demo'));
+const ThirdPartyHubDemo = lazy(() => import('./thirdparty/hub_demo'));
+const BestChecklistDemo = lazy(() => import('./best/checklist_demo'));
 
 export const demoRegistry: Readonly<
   Record<string, LazyExoticComponent<DemoComponentType>>
@@ -148,4 +150,6 @@ export const demoRegistry: Readonly<
   'reliability:breaker': BreakerDemo,
   'scaling:stateless': StatelessDemo,
   'reactive:compare': ReactiveCompareDemo,
+  'thirdparty:hub': ThirdPartyHubDemo,
+  'best:checklist': BestChecklistDemo,
 };

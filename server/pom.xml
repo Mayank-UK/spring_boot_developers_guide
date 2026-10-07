@@ -443,6 +443,21 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webclient</artifactId>
         </dependency>
+        <!-- Topic 43 (third-party) — FLAGGED NEW DEP, versionless through the
+             Boot 4.1.1 BOM: Spring Mail — spring-context-support's
+             JavaMailSender(+Impl) plus the jakarta.mail API and the Angus
+             Mail transport. This starter is the SUBJECT of the topic's mail
+             section, not a live relay connection: JavaMailSenderImpl opens
+             its socket per SEND, never at construction, so the
+             ThirdPartyDemoConfig wires a real adapter behind the mail port
+             (proving the drop-in boots) while every demo trigger and test
+             routes to the in-process fake — the app's zero-network
+             guarantee is unchanged. No spring.mail.host is set anywhere,
+             so Boot's own MailSender autoconfiguration stays dormant. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
