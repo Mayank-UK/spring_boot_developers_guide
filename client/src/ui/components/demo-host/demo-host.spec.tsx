@@ -81,6 +81,8 @@ describe('DemoHost', () => {
       'obs:viewer',
       'obs:trace',
       'arch:tracer',
+      'arch:saga',
+      'arch:eventstore',
       'testing:runner',
       'debug:stall',
       'env:inspector',

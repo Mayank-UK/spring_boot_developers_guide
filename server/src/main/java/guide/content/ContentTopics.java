@@ -3,6 +3,7 @@ package guide.content;
 import guide.content.topics.AopTopic;
 import guide.content.topics.ApiDesignTopic;
 import guide.content.topics.ApiDocumentationTopic;
+import guide.content.topics.AdvancedArchitectureTopic;
 import guide.content.topics.ArchitectureTopic;
 import guide.content.topics.AuthenticationTopic;
 import guide.content.topics.AuthorizationTopic;
@@ -100,6 +101,7 @@ public final class ContentTopics {
                 ScalingTopic.topic(),
                 ReactiveSpringTopic.topic(),
                 BestPracticesTopic.topic(),
-                ThirdPartyTopic.topic());
+                ThirdPartyTopic.topic(),
+                AdvancedArchitectureTopic.topic());
     }
 }
