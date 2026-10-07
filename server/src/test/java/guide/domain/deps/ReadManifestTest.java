@@ -57,12 +57,14 @@ class ReadManifestTest {
                 .map(decision -> decision.groupId() + ":" + decision.artifactId())
                 .toList();
         // the registry is append-only by design — topic 33 (observability) added
-        // the logstash encoder pin; later pinned deps extend this list the same way
+        // the logstash encoder pin; topic 39 (reliability) added resilience4j the
+        // same way; later pinned deps extend this list the same way
         assertEquals(List.of(
                 "org.springdoc:springdoc-openapi-starter-webmvc-ui",
                 "com.bucket4j:bucket4j_jdk17-core",
                 "net.coobird:thumbnailator",
-                "net.logstash.logback:logstash-logback-encoder"), coordinates);
+                "net.logstash.logback:logstash-logback-encoder",
+                "io.github.resilience4j:resilience4j-spring-boot3"), coordinates);
     }
 
     @Test

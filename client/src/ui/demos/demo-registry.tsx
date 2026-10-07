@@ -81,6 +81,8 @@ const DebugStallDemo = lazy(() => import('./debugging/debug_stall_demo'));
 const EnvInspectorDemo = lazy(() => import('./environments/env_inspector_demo'));
 const DeployStackDemo = lazy(() => import('./deployment/deploy_stack_demo'));
 const PerfBenchDemo = lazy(() => import('./performance/perf_bench_demo'));
+const BreakerDemo = lazy(() => import('./reliability/breaker_demo'));
+const StatelessDemo = lazy(() => import('./scaling/stateless_demo'));
 
 export const demoRegistry: Readonly<
   Record<string, LazyExoticComponent<DemoComponentType>>
@@ -142,4 +144,6 @@ export const demoRegistry: Readonly<
   'env:inspector': EnvInspectorDemo,
   'deploy:stack': DeployStackDemo,
   'perf:bench': PerfBenchDemo,
+  'reliability:breaker': BreakerDemo,
+  'scaling:stateless': StatelessDemo,
 };

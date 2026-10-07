@@ -404,6 +404,28 @@
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-context-slf4j</artifactId>
         </dependency>
+        <!-- Topic 39 (reliability) — FLAGGED NEW DEP, version verified on repo1
+             Central (maven-metadata: 2.3.0 is the resilience4j-spring-boot3
+             line's latest, 2025-01; no Boot-4-native line exists yet). NOT
+             managed by the Boot BOM, so the version is explicit. Boot 4
+             compatibility VERIFIED EMPIRICALLY (2026-10-07, probe project):
+             the artifact drags no Boot 3 Spring jars (its Spring deps are
+             optional), its AutoConfiguration.imports file still loads under
+             Boot 4.1.1, and a full context boots cleanly WITH actuator +
+             micrometer-prometheus on the classpath. The demo wraps the
+             PROGRAMMATIC API behind a domain port (guide.domain.reliability
+             .BreakerPort) adapted in guide.data.reliability — the domain
+             layer never imports r4j (topic 32's dependency rule, enforced
+             by DependencyRuleTest) — no AOP needed, and state transitions
+             stay observable and sleep-free-drivable (transitionToHalfOpen
+             State via the port is the manual probe rail). Annotation
+             aspects would additionally need spring-boot-starter-aspectj
+             (already present here). -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.3.0</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -69,5 +69,17 @@ public final class FlaggedDecisions {
                             + "1.5.20 provided-scope and targets Java 17 bytecode, "
                             + "comfortably inside this repo's Boot 4.1.1 BOM (Logback "
                             + "1.5.38) on Java 25.",
-                    "33 observability"));
+                    "33 observability"),
+            new FlaggedDecision("io.github.resilience4j", "resilience4j-spring-boot3", "2.3.0",
+                    "The curriculum's named circuit-breaker library. The artifact name "
+                            + "says spring-boot3 but 2.3.0 is the Boot-4-compatible line: "
+                            + "dependency:tree under this repo's Boot 4.1.1 parent drags NO "
+                            + "Boot-3 Spring jars (only the versionless r4j core/annotations "
+                            + "the BOM resolves), and the context boots clean beside actuator "
+                            + "and micrometer-prometheus. Used PROGRAMMATICALLY ONLY — the "
+                            + "CircuitBreaker lives behind the domain-owned BreakerPort with "
+                            + "the r4j types confined to the data/reliability adapter, so the "
+                            + "starter's autoconfig/property surface is never engaged and "
+                            + "nothing hides the machinery the topic teaches.",
+                    "39 reliability"));
 }

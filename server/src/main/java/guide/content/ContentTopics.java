@@ -26,12 +26,14 @@ import guide.content.topics.MongodbTopic;
 import guide.content.topics.MessagingTopic;
 import guide.content.topics.ObservabilityTopic;
 import guide.content.topics.PerformanceTopic;
+import guide.content.topics.ReliabilityTopic;
 import guide.content.topics.SpringBootFundamentalsTopic;
 import guide.content.topics.RequestResponseTopic;
 import guide.content.topics.RedisTopic;
 import guide.content.topics.RealtimeTopic;
 import guide.content.topics.RoutingTopic;
 import guide.content.topics.SecurityTopic;
+import guide.content.topics.ScalingTopic;
 import guide.content.topics.SpringCoreTopic;
 import guide.content.topics.SpringDataJpaTopic;
 import guide.content.topics.SqlSchemaTopic;
@@ -90,6 +92,8 @@ public final class ContentTopics {
                 DebuggingTopic.topic(),
                 EnvironmentsTopic.topic(),
                 DeploymentTopic.topic(),
-                PerformanceTopic.topic());
+                PerformanceTopic.topic(),
+                ReliabilityTopic.topic(),
+                ScalingTopic.topic());
     }
 }

@@ -86,6 +86,8 @@ describe('DemoHost', () => {
       'env:inspector',
       'deploy:stack',
       'perf:bench',
+      'reliability:breaker',
+      'scaling:stateless',
     ]);
   });
 });
