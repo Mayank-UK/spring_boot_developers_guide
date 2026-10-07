@@ -88,6 +88,7 @@ describe('DemoHost', () => {
       'perf:bench',
       'reliability:breaker',
       'scaling:stateless',
+      'reactive:compare',
     ]);
   });
 });

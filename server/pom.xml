@@ -426,6 +426,23 @@
             <artifactId>resilience4j-spring-boot3</artifactId>
             <version>2.3.0</version>
         </dependency>
+        <!-- Topic 41 (reactive-spring) — FLAGGED NEW DEP, versionless through the
+             Boot 4.1.1 BOM: the dedicated WebClient starter Boot 4's
+             modularization introduced (spring-boot-starter-webclient), chosen
+             over spring-boot-starter-webflux because it is the MINIMAL artifact
+             that provides a real WebClient: spring-boot-webclient (the
+             WebClient.Builder autoconfiguration) + spring-boot-reactor +
+             reactor-netty-http (the connector) — no reactive server stack is
+             dragged in or activated. reactor-core itself was ALREADY on the
+             compile classpath (3.8.7, pulled by topic 13's
+             spring-boot-starter-graphql), which is the dependency-provenance
+             story the topic teaches: this app is and stays servlet MVC on
+             virtual threads; reactor is a LIBRARY here (pipelines, WebClient,
+             SSE-friendly types), never the server posture. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webclient</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

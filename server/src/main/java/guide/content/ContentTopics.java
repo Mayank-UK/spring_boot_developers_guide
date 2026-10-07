@@ -27,6 +27,7 @@ import guide.content.topics.MessagingTopic;
 import guide.content.topics.ObservabilityTopic;
 import guide.content.topics.PerformanceTopic;
 import guide.content.topics.ReliabilityTopic;
+import guide.content.topics.ReactiveSpringTopic;
 import guide.content.topics.SpringBootFundamentalsTopic;
 import guide.content.topics.RequestResponseTopic;
 import guide.content.topics.RedisTopic;
@@ -94,6 +95,7 @@ public final class ContentTopics {
                 DeploymentTopic.topic(),
                 PerformanceTopic.topic(),
                 ReliabilityTopic.topic(),
-                ScalingTopic.topic());
+                ScalingTopic.topic(),
+                ReactiveSpringTopic.topic());
     }
 }

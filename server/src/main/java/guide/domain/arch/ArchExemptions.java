@@ -148,6 +148,16 @@ public final class ArchExemptions {
                 new DomainExemption("guide/domain/files/CreateThumbnail.java",
                         "net.coobird.thumbnailator.",
                         "image resizing — the library is the capability (topic 26)"),
+                // -- reactor: the pipelines ARE the lesson (topic 41)
+                new DomainExemption("guide/domain/reactive/CompareExecutionModels.java",
+                        "reactor.core.",
+                        "Reactor's Flux/Mono are the subject being taught — the side-by-side engine's pipeline half (topic 41)"),
+                new DomainExemption("guide/domain/reactive/DemonstrateBackpressure.java",
+                        "reactor.core.",
+                        "backpressure operators ARE the lesson — the drop/buffer choreography (topic 41)"),
+                new DomainExemption("guide/domain/reactive/DemonstrateBackpressure.java",
+                        "org.reactivestreams.",
+                        "the reactive-streams SPI (Subscription.request) — backpressure IS the demand protocol this exhibit teaches"),
                 // -- logging and JSON: infra-agnostic APIs
                 new DomainExemption("guide/domain/errors/UncaughtFailureLogger.java",
                         "org.slf4j.",
