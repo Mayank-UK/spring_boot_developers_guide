@@ -249,6 +249,24 @@ management:
     mongodb:
       enabled: false
 
+# Topic 36 (environments) — FLAGGED APPEND: the app's own typed config,
+# constructor-bound into guide.core.AppConfig (a @ConfigurationProperties
+# record) by EnvironmentsDemoConfig's @EnableConfigurationProperties. Every
+# value is twelve-factor style: environment override first, clearly-named
+# dev default second. Demo-scoped on purpose — this block exists to give the
+# env inspector a controlled set: three SAFE values it echoes and ONE
+# marked-as-secret key it demonstrates redaction on. The default key is
+# loudly fake; production would set GUIDE_DEMO_API_KEY from a secret store,
+# and the inspector would still never echo it (only the dev-default verdict
+# travels, so "prod forgot the env var" stays visible without leaking).
+guide:
+  env:
+    deploy-environment: ${GUIDE_DEPLOY_ENV:local}
+    region: ${GUIDE_REGION:local}
+    maintenance-mode: ${GUIDE_MAINTENANCE_MODE:false}
+    demo-api-key: ${GUIDE_DEMO_API_KEY:demo-only-not-a-real-secret}
+
+
 # ── Topic 13 (graphql): DEV-ONLY document ────────────────────────────────────
 # GraphiQL, the in-browser schema explorer, mounts at /graphiql when the dev
 # profile is active (docker-compose.yml sets SPRING_PROFILES_ACTIVE=dev).

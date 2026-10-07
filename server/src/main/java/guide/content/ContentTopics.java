@@ -10,6 +10,7 @@ import guide.content.topics.BackgroundJobsTopic;
 import guide.content.topics.CachingTopic;
 import guide.content.topics.DebuggingTopic;
 import guide.content.topics.DependencyManagementTopic;
+import guide.content.topics.EnvironmentsTopic;
 import guide.content.topics.ExceptionHandlingTopic;
 import guide.content.topics.FilesMediaTopic;
 import guide.content.topics.FiltersInterceptorsTopic;
@@ -84,6 +85,7 @@ public final class ContentTopics {
                 ArchitectureTopic.topic(),
                 ObservabilityTopic.topic(),
                 TestingTopic.topic(),
-                DebuggingTopic.topic());
+                DebuggingTopic.topic(),
+                EnvironmentsTopic.topic());
     }
 }

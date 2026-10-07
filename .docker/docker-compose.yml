@@ -50,6 +50,12 @@ services:
       - 8080:8080
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      # Topic 36 (environments): one deliberately-visible config override —
+      # the same twelve-factor rail as the datasource lines below. The env
+      # inspector (GET /api/demo/env/inspector) reports guide.env.deploy-
+      # environment from HERE inside compose, and "local" outside it: proof
+      # that one build answers for every environment by reading env vars.
+      - GUIDE_DEPLOY_ENV=dev
       # Phase 6 (data foundation): the datasource, by service name inside the
       # compose network (the application.yml defaults point at localhost,
       # which only holds outside compose).

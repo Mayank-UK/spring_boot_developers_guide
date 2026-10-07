@@ -78,6 +78,7 @@ const ObsTraceDemo = lazy(() => import('./obs/trace_demo'));
 const ArchTracerDemo = lazy(() => import('./arch/tracer_demo'));
 const TestingRunnerDemo = lazy(() => import('./testing/testing_runner_demo'));
 const DebugStallDemo = lazy(() => import('./debugging/debug_stall_demo'));
+const EnvInspectorDemo = lazy(() => import('./environments/env_inspector_demo'));
 
 export const demoRegistry: Readonly<
   Record<string, LazyExoticComponent<DemoComponentType>>
@@ -136,4 +137,5 @@ export const demoRegistry: Readonly<
   'arch:tracer': ArchTracerDemo,
   'testing:runner': TestingRunnerDemo,
   'debug:stall': DebugStallDemo,
+  'env:inspector': EnvInspectorDemo,
 };

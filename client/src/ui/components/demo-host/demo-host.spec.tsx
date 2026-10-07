@@ -83,6 +83,7 @@ describe('DemoHost', () => {
       'arch:tracer',
       'testing:runner',
       'debug:stall',
+      'env:inspector',
     ]);
   });
 });
