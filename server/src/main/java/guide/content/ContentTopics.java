@@ -8,6 +8,7 @@ import guide.content.topics.AuthenticationTopic;
 import guide.content.topics.AuthorizationTopic;
 import guide.content.topics.BackgroundJobsTopic;
 import guide.content.topics.CachingTopic;
+import guide.content.topics.DebuggingTopic;
 import guide.content.topics.DependencyManagementTopic;
 import guide.content.topics.ExceptionHandlingTopic;
 import guide.content.topics.FilesMediaTopic;
@@ -31,6 +32,7 @@ import guide.content.topics.SecurityTopic;
 import guide.content.topics.SpringCoreTopic;
 import guide.content.topics.SpringDataJpaTopic;
 import guide.content.topics.SqlSchemaTopic;
+import guide.content.topics.TestingTopic;
 import guide.content.topics.ValidationTopic;
 import guide.content.topics.WebhooksTopic;
 import java.util.List;
@@ -80,6 +82,8 @@ public final class ContentTopics {
                 ExceptionHandlingTopic.topic(),
                 DependencyManagementTopic.topic(),
                 ArchitectureTopic.topic(),
-                ObservabilityTopic.topic());
+                ObservabilityTopic.topic(),
+                TestingTopic.topic(),
+                DebuggingTopic.topic());
     }
 }

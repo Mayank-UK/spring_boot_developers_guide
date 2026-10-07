@@ -81,6 +81,8 @@ describe('DemoHost', () => {
       'obs:viewer',
       'obs:trace',
       'arch:tracer',
+      'testing:runner',
+      'debug:stall',
     ]);
   });
 });

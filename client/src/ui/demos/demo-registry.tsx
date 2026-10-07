@@ -76,6 +76,8 @@ const DepsManifestDemo = lazy(() => import('./deps/manifest_demo'));
 const ObsViewerDemo = lazy(() => import('./obs/viewer_demo'));
 const ObsTraceDemo = lazy(() => import('./obs/trace_demo'));
 const ArchTracerDemo = lazy(() => import('./arch/tracer_demo'));
+const TestingRunnerDemo = lazy(() => import('./testing/testing_runner_demo'));
+const DebugStallDemo = lazy(() => import('./debugging/debug_stall_demo'));
 
 export const demoRegistry: Readonly<
   Record<string, LazyExoticComponent<DemoComponentType>>
@@ -132,4 +134,6 @@ export const demoRegistry: Readonly<
   'obs:viewer': ObsViewerDemo,
   'obs:trace': ObsTraceDemo,
   'arch:tracer': ArchTracerDemo,
+  'testing:runner': TestingRunnerDemo,
+  'debug:stall': DebugStallDemo,
 };
