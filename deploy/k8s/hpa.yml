@@ -1,0 +1,30 @@
+# HorizontalPodAutoscaler — scale the Deployment's replicas on observed CPU
+# instead of a guess. The math runs against the Deployment's resource
+# REQUESTS (250m per pod in deployment.yml): at 70% average utilization the
+# controller adds pods; scaleDown has a stabilization window (5 minutes) so
+# a traffic dip does not thrash the fleet. Requires the metrics-server addon.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: server
+  namespace: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: server
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300

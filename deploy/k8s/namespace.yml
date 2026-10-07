@@ -1,0 +1,15 @@
+# Topic 37 (deployment) — the guide's Kubernetes manifests, one concern per
+# file: namespace, ConfigMap, Deployment, Service, Ingress, HPA. Every object
+# carries the app.kubernetes.io labels so `kubectl -n sbdg-guide` treats the
+# stack as one unit.
+#
+# Namespace first, because every manifest below names it: deployment tooling
+# applies files in order, and a Namespace object is "applied" exactly like any
+# other — infrastructure as code starts with the fence around the yard.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/part-of: springboot-developers-guide

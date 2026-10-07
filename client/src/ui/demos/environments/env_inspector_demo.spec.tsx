@@ -55,10 +55,12 @@ const DEFAULT_INSPECTION = {
 function inspectionWithMode(state: string): typeof DEFAULT_INSPECTION {
   return {
     ...DEFAULT_INSPECTION,
-    flags: [
-      { ...DEFAULT_INSPECTION.flags[0], state },
-      DEFAULT_INSPECTION.flags[1],
-    ],
+    // map (not index access) keeps the element type: indexed access is
+    // {flag} | undefined under noUncheckedIndexedAccess, which is what the
+    // two TS errors were — same produced values, now typed.
+    flags: DEFAULT_INSPECTION.flags.map((flag) =>
+      flag.name === 'scenario.data-mode' ? { ...flag, state } : flag,
+    ),
     reading: DEFAULT_INSPECTION.reading.map((line, index) =>
       index === 3
         ? `the flags are RUNTIME-switchable — config is not; data-mode is currently ${state} and PATCH /api/demo/scenario flips it live`

@@ -1,0 +1,33 @@
+# Non-secret configuration for the server pods — the Kubernetes twin of the
+# compose files' environment blocks. The Deployment below mounts it wholesale
+# with envFrom, so every key here becomes an environment variable in the
+# container: the same twelve-factor rail compose uses, the same rail
+# application.yml's ${ENV:default} placeholders read.
+#
+# Secrets NEVER live in a ConfigMap — it is plaintext, readable by anyone with
+# read access to the object. The parity/secrets section of topic 37 shows the
+# Secret + secretKeyRef half of this pattern (SDG_JWT_SECRET would go there).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-config
+  namespace: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+data:
+  # Topic 36 (environments) rails — the same env vars the compose stacks set,
+  # so the env inspector reports the same story from inside a pod. The value
+  # must be a member of AppConfig.KNOWN_ENVIRONMENTS (local/dev/staging/prod):
+  # a typo like "k8s" would fail the pod's BOOT by design — fail-fast config,
+  # the closed-set validation topic 36 teaches.
+  GUIDE_DEPLOY_ENV: staging
+  GUIDE_REGION: cluster-local
+  # The compose stacks point these at sibling service names (postgres:5432);
+  # in-cluster the stable DNS name of the data services goes here. The guide
+  # ships no postgres/redis/mongo manifests, so these point at services you
+  # would add — until then the app's optional-service discipline holds: the
+  # pods boot, serve fake-mode data, and answer typed 503s on live calls.
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres.sbdg-guide.svc.cluster.local:5432/guide
+  SPRING_DATA_MONGODB_URI: mongodb://mongo.sbdg-guide.svc.cluster.local:27017/guide
+  SPRING_DATA_REDIS_HOST: redis.sbdg-guide.svc.cluster.local

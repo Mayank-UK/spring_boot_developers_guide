@@ -1,0 +1,25 @@
+# The stable in-cluster front door for the server pods — compose's
+# `server` service name, promoted to a first-class object. A Service gets a
+# stable DNS name (server.sbdg-guide.svc.cluster.local) and load-balances
+# across whatever pods match the selector; the Deployment's pods come and go
+# during rollouts and the Service's endpoint list follows automatically.
+#
+# port 80 → targetPort http (named, so the container port can be renumbered
+# in the Deployment alone — the name is the indirection).
+apiVersion: v1
+kind: Service
+metadata:
+  name: server
+  namespace: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

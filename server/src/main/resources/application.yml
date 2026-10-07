@@ -154,9 +154,53 @@ spring:
     basename: messages/messages
     fallback-to-system-locale: false
     encoding: UTF-8
+  # Topic 38 (performance) — FLAGGED APPEND: the app's request threads go
+  # VIRTUAL. One line flips Boot's MVC stack onto one virtual thread per
+  # request: Tomcat mounts handlers on virtual threads instead of drawing
+  # from a fixed platform pool, so a handler parked on a database call, a
+  # redis round trip, or an upstream HTTP hop holds no OS thread while it
+  # waits. That is the right default for the blocking-I/O shape this guide
+  # teaches — the whole trade-off (and the pinning caveats) is topic 38's
+  # virtual-threads-at-scale section.
+  threads:
+    virtual:
+      enabled: true
+  # Topic 37 (deployment) — FLAGGED APPEND: the grace PERIOD for the graceful
+  # server shutdown above. Each shutdown phase (web server drain, then
+  # @PreDestroy/lifecycle bean stop, then SmartLifecycle stops) gets up to
+  # this long to complete before the context forces it onward — 30s covers a
+  # slow request without making a pod deletion hang a rollout. Paired with
+  # server.shutdown: graceful above; k8s's terminationGracePeriodSeconds must
+  # exceed it or the kubelet SIGKILLs mid-drain.
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 server:
   port: 8080
+  # Topic 37 (deployment) — FLAGGED APPEND: graceful shutdown. Boot's default
+  # is an IMMEDIATE shutdown: SIGTERM stops the web server at once, and every
+  # in-flight request dies mid-response (users see truncated JSON; callers see
+  # connection resets). "graceful" flips the order: on SIGTERM the server
+  # stops accepting NEW connections, lets in-flight requests finish, and only
+  # then shuts down — bounded by spring.lifecycle.timeout-per-shutdown-phase
+  # (below), so a hung request cannot pin the process open forever. This is
+  # what deploy/k8s/deployment.yml's terminationGracePeriodSeconds (45s,
+  # deliberately LONGER than the app's 30s budget) and preStop sleep are
+  # choreographed around.
+  shutdown: graceful
+  # Topic 38 (performance) — FLAGGED APPEND: response compression — the
+  # cheapest bandwidth win in the book, enabled here with twelve-factor env
+  # overrides. mime-types is ONE comma-separated string on purpose: relaxed
+  # binding still delivers List<String> to Boot, and the perf:bench demo
+  # reads the same line through the Environment to report the EFFECTIVE
+  # posture. min-response-size keeps tiny answers identity — compressing
+  # 200 bytes costs more CPU than it saves bytes (the trade the benchmark
+  # measures live). text/event-stream is deliberately absent: SSE answers
+  # stream incrementally, and buffering them to compress breaks the stream.
+  compression:
+    enabled: ${SERVER_COMPRESSION_ENABLED:true}
+    mime-types: ${SERVER_COMPRESSION_MIME_TYPES:application/json,text/html,text/css,text/plain}
+    min-response-size: ${SERVER_COMPRESSION_MIN_RESPONSE_SIZE:1KB}
   # Topic 23 (authentication) — FLAGGED APPEND: the session cookie's
   # attributes, the whole cookies-done-right section in three lines.
   # http-only: JavaScript never reads the session id (XSS loses its

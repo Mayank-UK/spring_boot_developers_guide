@@ -1,0 +1,34 @@
+# The edge: TLS termination and name-based routing into the cluster — the
+# same job nginx does for the compose prod stack (.docker/nginx.conf), done
+# by the platform's ingress controller instead of a container you run. The
+# TLS secret (server-tls) is created OUT of band — cert-manager issuing from
+# Let's Encrypt is the production path; the parity/secrets section covers
+# why the certificate never lives in git.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: server
+  namespace: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+  annotations:
+    # Force https:// — plain HTTP answers one redirect, nothing else.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - guide.example.com
+      secretName: server-tls
+  rules:
+    - host: guide.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: server
+                port:
+                  name: http

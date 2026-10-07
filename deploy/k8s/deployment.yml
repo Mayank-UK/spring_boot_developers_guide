@@ -1,0 +1,84 @@
+# The server workload — the k8s counterpart of compose's `server` service,
+# plus everything compose cannot express: replica count, rollout strategy,
+# health probes, resource requests/limits, and a preStop drain sleep.
+#
+# The image is the SAME layered-jar image the prod compose builds
+# (.docker/Dockerfile.server.prod). A real cluster cannot build locally:
+# `docker build` once, push to a registry under an immutable tag, and point
+# image: at it (digest pinning for the strict version). kind/minikube can
+# side-load the local tag instead (kind load docker-image sbdg_server_prod).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+  namespace: sbdg-guide
+  labels:
+    app.kubernetes.io/name: springboot-developers-guide
+    app.kubernetes.io/component: server
+spec:
+  replicas: 2
+  # The rollout contract: never drop a pod below desired (maxUnavailable: 0)
+  # while surging one extra (maxSurge: 1) — combined with readiness gating
+  # this is zero-downtime deploys in four lines of yaml.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: springboot-developers-guide
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: springboot-developers-guide
+        app.kubernetes.io/component: server
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: server
+          image: sbdg_server_prod
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: server-config
+          # Probes hit the actuator's k8s-shaped pair (enabled in
+          # application.yml: management.endpoint.health.probes.enabled).
+          # liveness = "restart me" (dead process); readiness = "stop routing
+          # to me" (booting, or dependencies gone). Mixing them up is the
+          # classic cascade-restart outage.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          # The scheduler's promise: requests are reserved (drives bin-packing
+          # and HPA math), limits are the ceiling (drives OOMKill/throttling).
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+          # Drain dance with graceful shutdown (application.yml sets
+          # server.shutdown: graceful): kubelet sends SIGTERM, the preStop
+          # sleep covers the window where the endpoint is still registered in
+          # Service load balancing while the app already drains, then Boot
+          # stops accepting new connections and finishes in-flight requests
+          # within spring.lifecycle.timeout-per-shutdown-phase.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]

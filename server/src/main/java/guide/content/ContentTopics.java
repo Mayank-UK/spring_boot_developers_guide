@@ -10,6 +10,7 @@ import guide.content.topics.BackgroundJobsTopic;
 import guide.content.topics.CachingTopic;
 import guide.content.topics.DebuggingTopic;
 import guide.content.topics.DependencyManagementTopic;
+import guide.content.topics.DeploymentTopic;
 import guide.content.topics.EnvironmentsTopic;
 import guide.content.topics.ExceptionHandlingTopic;
 import guide.content.topics.FilesMediaTopic;
@@ -24,6 +25,7 @@ import guide.content.topics.JvmTopic;
 import guide.content.topics.MongodbTopic;
 import guide.content.topics.MessagingTopic;
 import guide.content.topics.ObservabilityTopic;
+import guide.content.topics.PerformanceTopic;
 import guide.content.topics.SpringBootFundamentalsTopic;
 import guide.content.topics.RequestResponseTopic;
 import guide.content.topics.RedisTopic;
@@ -86,6 +88,8 @@ public final class ContentTopics {
                 ObservabilityTopic.topic(),
                 TestingTopic.topic(),
                 DebuggingTopic.topic(),
-                EnvironmentsTopic.topic());
+                EnvironmentsTopic.topic(),
+                DeploymentTopic.topic(),
+                PerformanceTopic.topic());
     }
 }
