@@ -1,0 +1,81 @@
+# Topic 13 (graphql): the schema-first contract for the posts substrate.
+# One file IS the API surface: every type, field, argument, and nullability
+# decision a client can rely on — the same posts the REST API of topic 11
+# serves, now described as a GraphQL type graph instead of a resource tree.
+# Loaded by Boot's GraphQlSource from classpath:graphql/** (see the
+# spring.graphql.schema.fileExtensions line in application.yml — the default
+# extension is .graphqls, this file says .graphql).
+
+# The lifecycle states a post can be in. GraphQL enums are UPPER_CASE by
+# convention; the names here are the Java enum's names (DRAFT, PUBLISHED) —
+# note the REST wire spells them lowercase ("draft"), the GraphQL names are
+# their own contract, not Jackson's.
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+# The read side. Arguments carry the knobs (page, size, status filter);
+# nullability is contract: posts(page:…) always answers a PostPage (maybe an
+# empty one), while post(id:…) may answer null — though this API prefers a
+# typed error over null (see the errors section of the topic).
+type Query {
+  post(id: ID!): Post
+  posts(page: Int, size: Int, status: PostStatus): PostPage
+}
+
+# The write side. Every mutation takes exactly what it needs: create reads
+# only an input, update also reads the version it expects (optimistic
+# concurrency — the same rule the REST PUT enforces via If-Match), delete
+# answers a boolean. Mutations are fields like any other — the operation
+# keyword is what makes them side-effecting by convention.
+type Mutation {
+  createPost(input: PostInput!): Post
+  updatePost(id: ID!, expectedVersion: Int!, input: PostInput!): Post
+  deletePost(id: ID!): Boolean
+}
+
+# The aggregate: content judged at birth, lifecycle, the optimistic-version
+# token, and the association this topic exists to teach — comments, non-null
+# LIST of non-null items (a post may have zero comments, never a null list,
+# never a half-materialized comment).
+type Post {
+  id: ID!
+  title: String!
+  body: String!
+  tags: [String!]!
+  status: PostStatus!
+  version: Int!
+  comments: [Comment!]!
+}
+
+# A reader's remark on a post. Deliberately small: identity, parent, author,
+# body — enough shape to make association loading interesting, nothing more.
+type Comment {
+  id: ID!
+  postId: ID!
+  author: String!
+  body: String!
+}
+
+# One page of a posts listing — the pagination contract as a TYPE rather
+# than a Link header: the client selects the metadata fields it wants, and
+# totalElements/totalPages ride alongside the items in the same response.
+type PostPage {
+  items: [Post!]!
+  page: Int!
+  size: Int!
+  totalElements: Int!
+  totalPages: Int!
+}
+
+# The creation/replacement shape — the GraphQL mirror of PostDraft. Required
+# fields are non-null (the schema itself rejects their absence); optional
+# ones are nullable: omit tags and you get [], omit status and you get DRAFT,
+# the same defaults PostDraft.of applies on the REST side.
+input PostInput {
+  title: String!
+  body: String!
+  tags: [String!]
+  status: PostStatus
+}

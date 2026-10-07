@@ -1,0 +1,12 @@
+# Dev toolchain container: JDK 25 + Maven 3.9 with the Node 22 toolchain
+# layered on top — one container that can build and test both halves of the
+# repo. The base is Ubuntu-noble (glibc 2.39) and the node layer is built on
+# Debian bookworm (glibc 2.36); Node's official binaries target old glibc
+# (>= 2.28), so the newer base runs them fine. COPY merges directories, so
+# Maven's own /usr/local entries survive the overlay.
+FROM maven:3.9-eclipse-temurin-25
+
+# bin/{node,npm,npx,corepack} + lib/node_modules from the official image.
+COPY --from=node:22-bookworm /usr/local/ /usr/local/
+
+WORKDIR /workspaces/springboot_developers_guide

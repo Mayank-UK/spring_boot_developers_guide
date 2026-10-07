@@ -1,0 +1,178 @@
+# Dev stack: dev (devcontainer tooling) + server + client + data services.
+# Explicit compose project name: without it compose derives "docker" from
+# this file's .docker/ parent dir, which shows as a bare "docker" group in
+# Docker Desktop. It also keeps VS Code's stack and any manual compose
+# invocation in one project.
+name: springboot_developers_guide
+
+services:
+  # The container VS Code attaches to (see .devcontainer/devcontainer.json):
+  # JDK 25 + Maven + Node 22 toolchain for tests, git, and builds. It runs no
+  # app — the server/client containers below run their own dev servers.
+  dev:
+    build:
+      context: ./../
+      dockerfile: ./.docker/Dockerfile.dev
+    image: sbdg_dev_toolchain
+    container_name: springboot_developers_guide_dev
+    init: true
+    command: sleep infinity
+    environment:
+      # Phase 6 (data foundation): Testcontainers inside this container
+      # reaches sibling containers' PUBLISHED ports through the Docker
+      # Desktop host alias — the raw bridge gateway (172.17.0.1) does not
+      # carry published ports on macOS, so Ryuk/postgres connections would
+      # be refused without this override.
+      - TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
+    volumes:
+      # Live source; the anonymous volumes below keep container-only build
+      # outputs out of the host bind mount (host target/ and node_modules/
+      # stay empty by design — the express-family rule).
+      - ./../:/workspaces/springboot_developers_guide
+      - /workspaces/springboot_developers_guide/server/target
+      - /workspaces/springboot_developers_guide/client/node_modules
+      # Phase 6 (data foundation): the Docker socket, so Testcontainers
+      # running INSIDE this container spawns sibling containers (postgres:17
+      # for the persistence tests) on the host daemon — the devcontainer
+      # pattern for "tests against real infrastructure, no DinD".
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Spring Boot dev server: mvn spring-boot:run against the bind-mounted
+  # source (devtools hot reload). Maven dependencies cache in the container's
+  # writable layer until it is recreated.
+  server:
+    image: maven:3.9-eclipse-temurin-25
+    container_name: springboot_developers_guide_server_dev
+    restart: unless-stopped
+    working_dir: /srv
+    command: mvn -q spring-boot:run
+    ports:
+      - 8080:8080
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      # Phase 6 (data foundation): the datasource, by service name inside the
+      # compose network (the application.yml defaults point at localhost,
+      # which only holds outside compose).
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide
+      - SPRING_DATASOURCE_USERNAME=guide
+      - SPRING_DATASOURCE_PASSWORD=guide
+      # Same sibling-Testcontainers reachability as the dev service.
+      - TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
+      # Topic 21 (caching): the shared stores by service name — a cache every
+      # replica shares (and a Mongo reachable in compose) start with these
+      # two env flips; application.yml keeps localhost defaults.
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/guide
+      - SPRING_DATA_REDIS_HOST=redis
+    volumes:
+      # Anonymous volume over /srv/target: Maven build output stays in Docker
+      # and never lands in the host's server/ tree.
+      - ./../server:/srv
+      - /srv/target
+      # Named m2 cache (shared with the host-side verification runs): first
+      # boot skips the full dependency download instead of caching in the
+      # container's writable layer.
+      - sbdg-m2:/root/.m2
+      # Phase 6: same sibling-Testcontainers socket as the dev service —
+      # mvn test run from inside this container needs it for postgres:17.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  # Vite dev server: installs from the lockfile on every (re)create, then
+  # serves on 0.0.0.0 so the published port works from the host browser.
+  client:
+    image: node:22-bookworm
+    container_name: springboot_developers_guide_client_dev
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    ports:
+      - 5176:5176
+    environment:
+      # Inside compose the server is reachable by service name, not localhost.
+      - API_PROXY_TARGET=http://server:8080
+    volumes:
+      # Anonymous node_modules volume: the container install never leaks onto
+      # the host, and the host's (intentionally empty) dir never shadows it.
+      - ./../client:/app
+      - /app/node_modules
+      # Named npm cache (shared with the host-side verification runs).
+      - sbdg-npm:/root/.npm
+    depends_on:
+      - server
+
+  # PostgreSQL 17 — the guide's only SQL engine (no H2: one dialect, tests
+  # against the real thing). guide/guide/guide.
+  postgres:
+    image: postgres:17
+    container_name: springboot_developers_guide_postgres_dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=guide
+      - POSTGRES_PASSWORD=guide
+      - POSTGRES_DB=guide
+    ports:
+      # Published so a host-run server or psql can reach it at 127.0.0.1:5432.
+      - 5432:5432
+    volumes:
+      - sbdg-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guide -d guide"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Redis — caching/session/pub-sub topics; the app degrades gracefully if
+  # it is down, so demos report "off" rather than failing the stack.
+  redis:
+    image: redis:7-alpine
+    container_name: springboot_developers_guide_redis_dev
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    volumes:
+      - sbdg-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # MongoDB — the MongoDB/Spring Data MongoDB topic's engine, same
+  # optional-service deal as redis.
+  mongo:
+    image: mongo:8
+    container_name: springboot_developers_guide_mongo_dev
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    volumes:
+      - sbdg-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  sbdg-pg-data:
+  sbdg-redis-data:
+  sbdg-mongo-data:
+  # External: reuse the standalone caches the host-side verification runs
+  # populated (docker run -v sbdg-m2:/root/.m2 ...) — without `external:
+  # true` compose prefixes these with the project name and creates EMPTY
+  # twins, silently forcing full dependency re-downloads.
+  sbdg-m2:
+    name: sbdg-m2
+    external: true
+  sbdg-npm:
+    name: sbdg-npm
+    external: true

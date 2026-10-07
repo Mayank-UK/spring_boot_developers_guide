@@ -1,0 +1,20 @@
+# Production server image — Spring Boot's layered jar format, extracted into
+# image layers ordered by change frequency (dependencies change least, app
+# code most) for fast rebuilds and cold starts. Build context: repo root.
+FROM maven:3.9-eclipse-temurin-25 AS build
+WORKDIR /srv
+# -DskipTests: CI runs the suite; image builds stay fast.
+COPY server/ ./
+RUN mvn -q -DskipTests package \
+ && java -Djarmode=tools -jar target/*.jar extract --layers --destination target/extracted
+
+FROM eclipse-temurin:25-jre-noble
+WORKDIR /app
+# Layer order matters: least-changed first. The extracted layout is launched
+# by the Boot loader's main class from the merged /app directory.
+COPY --from=build /srv/target/extracted/dependencies/ ./
+COPY --from=build /srv/target/extracted/spring-boot-loader/ ./
+COPY --from=build /srv/target/extracted/snapshot-dependencies/ ./
+COPY --from=build /srv/target/extracted/application/ ./
+EXPOSE 8080
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

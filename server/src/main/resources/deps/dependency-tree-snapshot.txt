@@ -1,0 +1,119 @@
+# Dependency-tree snapshot for topic 31 (dependency-management) — the static,
+# honestly-labeled capture served by GET /api/demo/deps/tree.
+# Regenerate: docker run --rm -v "$PWD":/repo -w /repo/server -v sbdg-m2:/root/.m2 \
+#   maven:3.9-eclipse-temurin-25 mvn -B dependency:tree
+# Live maven at request time is deliberately NOT run (too slow, mutates target/) —
+# topic 31 explains the trade-off and this file is the drift-checked stand-in.
+# Curation: ALL 31 direct dependencies + every second-level child; nothing deeper
+# (the manifest endpoint carries the key deep artifacts at runtime instead).
+[meta]
+captured: 2026-10-07
+tool: maven:3.9-eclipse-temurin-25, dependency:tree (maven-dependency-plugin 3.10.0)
+parent-bom: spring-boot-starter-parent 4.1.1
+imported-bom: spring-grpc-dependencies 1.0.3
+direct-count: 31
+[tree]
+guide:server:jar:0.0.1-SNAPSHOT
++- org.springframework.boot:spring-boot-starter-web:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter-jackson:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-http-converter:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-webmvc:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-validation:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-validation:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-actuator:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter-micrometer-metrics:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-actuator-autoconfigure:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-health:jar:4.1.1:compile
+|  +- io.micrometer:micrometer-observation:jar:1.17.1:compile
+|  \- io.micrometer:micrometer-jakarta9:jar:1.17.1:compile
++- org.springframework.boot:spring-boot-starter-aspectj:jar:4.1.1:compile
+|  +- org.springframework:spring-aop:jar:7.0.9:compile
+|  \- org.aspectj:aspectjweaver:jar:1.9.25.1:compile
++- org.springframework.boot:spring-boot-devtools:jar:4.1.1:runtime (optional)
+|  +- org.springframework.boot:spring-boot:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-autoconfigure:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-test:jar:4.1.1:test
+|  +- org.springframework.boot:spring-boot-test:jar:4.1.1:test
+|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:4.1.1:test
+|  +- com.jayway.jsonpath:json-path:jar:2.10.0:test
+|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:4.0.5:compile
+|  +- net.minidev:json-smart:jar:2.6.0:test
+|  +- org.assertj:assertj-core:jar:3.27.7:test
+|  +- org.awaitility:awaitility:jar:4.3.0:test
+|  +- org.hamcrest:hamcrest:jar:3.0:test
+|  +- org.junit.jupiter:junit-jupiter:jar:6.0.3:test
+|  +- org.mockito:mockito-core:jar:5.23.0:test
+|  +- org.mockito:mockito-junit-jupiter:jar:5.23.0:test
+|  +- org.skyscreamer:jsonassert:jar:1.5.3:test
+|  +- org.springframework:spring-core:jar:7.0.9:compile
+|  +- org.springframework:spring-test:jar:7.0.9:test
+|  \- org.xmlunit:xmlunit-core:jar:2.11.0:test
++- org.springframework.boot:spring-boot-webmvc-test:jar:4.1.1:test
+|  \- org.springframework.boot:spring-boot-web-server:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-testcontainers:jar:4.1.1:test
+|  \- org.testcontainers:testcontainers:jar:2.0.5:test
++- org.testcontainers:testcontainers-junit-jupiter:jar:2.0.5:test
++- org.testcontainers:testcontainers-postgresql:jar:2.0.5:test
+|  \- org.testcontainers:testcontainers-jdbc:jar:2.0.5:test
++- org.springdoc:springdoc-openapi-starter-webmvc-ui:jar:3.1.1:compile
+|  +- org.springdoc:springdoc-openapi-starter-webmvc-api:jar:3.1.1:compile
+|  +- org.webjars:swagger-ui:jar:5.32.14:compile
+|  \- org.webjars:webjars-locator-lite:jar:1.1.4:compile
++- org.springframework.boot:spring-boot-starter-graphql:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-reactor:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-graphql:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-jdbc:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-jdbc:jar:4.1.1:compile
+|  \- com.zaxxer:HikariCP:jar:7.0.2:compile
++- org.postgresql:postgresql:jar:42.7.13:runtime
+|  \- org.checkerframework:checker-qual:jar:3.55.1:runtime
++- org.flywaydb:flyway-core:jar:12.4.0:compile
+|  \- tools.jackson.core:jackson-databind:jar:3.1.5:compile
++- org.flywaydb:flyway-database-postgresql:jar:12.4.0:compile
++- org.springframework.boot:spring-boot-starter-data-jpa:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-data-jpa:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-data-jpa-test:jar:4.1.1:test
+|  +- org.springframework.boot:spring-boot-starter-jdbc-test:jar:4.1.1:test
+|  \- org.springframework.boot:spring-boot-data-jpa-test:jar:4.1.1:test
++- org.springframework.boot:spring-boot-starter-data-redis:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-data-redis:jar:4.1.1:compile
+|  \- org.springframework:spring-messaging:jar:7.0.9:compile
++- org.springframework.boot:spring-boot-starter-data-mongodb:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter-mongodb:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-data-mongodb:jar:4.1.1:compile
++- org.testcontainers:testcontainers-mongodb:jar:2.0.5:test
++- org.springframework.grpc:spring-grpc-server-spring-boot-starter:jar:1.0.3:compile
+|  +- org.springframework.grpc:spring-grpc-server-spring-boot-autoconfigure:jar:1.0.3:compile
+|  +- io.grpc:grpc-netty:jar:1.77.1:compile
+|  \- io.grpc:grpc-services:jar:1.77.1:compile
++- org.springframework.grpc:spring-grpc-client-spring-boot-starter:jar:1.0.3:compile
+|  \- org.springframework.grpc:spring-grpc-client-spring-boot-autoconfigure:jar:1.0.3:compile
++- io.grpc:grpc-protobuf:jar:1.77.1:compile
+|  +- io.grpc:grpc-api:jar:1.77.1:compile
+|  +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+|  +- com.google.protobuf:protobuf-java:jar:4.33.4:compile
+|  +- com.google.api.grpc:proto-google-common-protos:jar:2.63.2:compile
+|  +- com.google.guava:guava:jar:33.4.8-android:compile
+|  \- io.grpc:grpc-protobuf-lite:jar:1.77.1:runtime
++- io.grpc:grpc-stub:jar:1.77.1:compile
+|  +- org.codehaus.mojo:animal-sniffer-annotations:jar:1.24:compile
+|  \- com.google.errorprone:error_prone_annotations:jar:2.36.0:compile
++- org.springframework.boot:spring-boot-starter-security:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-security:jar:4.1.1:compile
++- org.springframework.boot:spring-boot-starter-oauth2-resource-server:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-security-oauth2-resource-server:jar:4.1.1:compile
++- com.bucket4j:bucket4j_jdk17-core:jar:8.21.0:compile
++- org.springframework.security:spring-security-test:jar:7.1.1:test
+|  +- org.springframework.security:spring-security-core:jar:7.1.1:compile
+|  \- org.springframework.security:spring-security-web:jar:7.1.1:compile
++- org.springframework.boot:spring-boot-starter-websocket:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-starter-webmvc:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-websocket:jar:4.1.1:compile
+\- net.coobird:thumbnailator:jar:0.4.21:compile
+[conflicts]
+# As reported by `mvn dependency:tree -Dverbose` (kept verbatim, context added):
+com.google.guava:guava:33.4.8-jre:runtime omitted for conflict with 33.4.8-android — the -jre flavor was asked by io.grpc:grpc-services -> com.google.protobuf:protobuf-java-util (depth 3); the -android flavor is declared by io.grpc:grpc-protobuf (depth 2) — NEAREST WINS.
+com.google.errorprone:error_prone_annotations:2.18.0:runtime omitted for conflict with 2.36.0 — one branch's older request lost; a third branch asked 2.41.0 and ALSO lost to 2.36.0 — mediation picks one, not the newest.
+io.micrometer:micrometer-observation:1.17.1 — version managed from 1.16.7: spring-web requested 1.16.7, the Boot BOM's dependencyManagement forces 1.17.1 — the BOM beats every transitive request.

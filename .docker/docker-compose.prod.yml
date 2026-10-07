@@ -1,0 +1,96 @@
+# Production stack: prod-built server + nginx client + the same data services
+# as the dev stack. Self-contained by family convention (the express guide's
+# compose files duplicate rather than extend): running it never mutates the dev
+# stack. The distinct project name namespaces its volumes — prod data starts
+# fresh and never shares the dev databases.
+name: springboot_developers_guide_prod
+
+services:
+  server:
+    build:
+      context: ./../
+      dockerfile: ./.docker/Dockerfile.server.prod
+    image: sbdg_server_prod
+    container_name: springboot_developers_guide_server_prod
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    environment:
+      # Phase 6 (data foundation): the datasource, by service name inside the
+      # compose network (mirrors the dev stack's server env exactly).
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide
+      - SPRING_DATASOURCE_USERNAME=guide
+      - SPRING_DATASOURCE_PASSWORD=guide
+      # Topic 21 (caching): mirrors the dev stack — Mongo URI and Redis host
+      # by service name (the same env the dev compose gained).
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/guide
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  client:
+    build:
+      context: ./../
+      dockerfile: ./.docker/Dockerfile.client.prod
+    image: sbdg_client_prod
+    container_name: springboot_developers_guide_client_prod
+    restart: unless-stopped
+    ports:
+      - 8081:80
+    depends_on:
+      - server
+
+  # Same definitions as the dev stack, minus the published ports: in prod the
+  # data services stay internal to the compose network.
+  postgres:
+    image: postgres:17
+    container_name: springboot_developers_guide_postgres_prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=guide
+      - POSTGRES_PASSWORD=guide
+      - POSTGRES_DB=guide
+    volumes:
+      - sbdg-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guide -d guide"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: springboot_developers_guide_redis_prod
+    restart: unless-stopped
+    volumes:
+      - sbdg-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  mongo:
+    image: mongo:8
+    container_name: springboot_developers_guide_mongo_prod
+    restart: unless-stopped
+    volumes:
+      - sbdg-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  sbdg-pg-data:
+  sbdg-redis-data:
+  sbdg-mongo-data:

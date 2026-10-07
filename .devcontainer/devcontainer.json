@@ -1,0 +1,24 @@
+// VS Code devcontainer — the standard dev path for this repo. The full dev
+// stack (this `dev` tooling container + server + client + postgres + redis +
+// mongo) is defined once in ../.docker/docker-compose.yml; VS Code attaches to
+// the `dev` service and starts the whole stack with it. The app containers run
+// their own dev servers (hot-reload via bind mounts, ports published to the
+// host), so integrated terminals are for tests/git/builds, not the app.
+{
+  "name": "springboot-developers-guide",
+  "dockerComposeFile": "../.docker/docker-compose.yml",
+  "service": "dev",
+  "runServices": ["dev", "server", "client", "postgres", "redis", "mongo"],
+  "workspaceFolder": "/workspaces/springboot_developers_guide",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Java: language server, debugger, test runner, Maven panel.
+        "vscjava.vscode-java-pack",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Topic 33 (observability): the app's logging configuration — ONE file,
+     two personalities selected by Spring profile.
+
+     The default (and prod) personality is STRUCTURED: one JSON object per
+     event via logstash-logback-encoder's LogstashEncoder, MDC included, so
+     requestId and traceId ride as FIELDS a log platform can filter and join
+     on instead of substrings a human has to grep.
+
+     The dev personality stays READABLE: Boot's classic console pattern with
+     the two MDC keys appended, because a developer tailing a terminal wants
+     shape, not machine food.
+
+     The OBS_RING appender is attached in BOTH personalities: the log viewer
+     demo reads recent structured events from it. It is a second DESTINATION
+     for the same events, never a parallel logging API — whatever these
+     personalities print, the ring sees exactly the same.
+
+     This file replaces Boot's logging defaults entirely (that is what
+     owning a logback-spring.xml means): the root level, the appenders, and
+     the encoder custom field naming the application all live here now. -->
+<configuration>
+
+    <springProperty scope="context" name="appName" source="spring.application.name"
+                    defaultValue="springboot-developers-guide"/>
+
+    <!-- JSON for machines: one object per event; @timestamp, level, logger,
+         thread, message by default, every MDC key as a field, and the app
+         name stamped on every line so a shared log platform can attribute
+         events. -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}"}</customFields>
+            <timeZone>UTC</timeZone>
+        </encoder>
+    </appender>
+
+    <!-- The classic pattern for humans: Boot's default console layout plus
+         the two correlation keys, empty when the event carries none (a
+         startup line has neither — that emptiness is itself information). -->
+    <appender name="PATTERN_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX, UTC} %-5level [%thread] %logger{36} %msg requestId=%X{requestId} traceId=%X{traceId}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- The teaching ring: bounded (500), thread-safe, attached in every
+         personality; the viewer serves what it holds. -->
+    <appender name="OBS_RING" class="guide.data.obs.LogRingAppender">
+        <capacity>500</capacity>
+    </appender>
+
+    <!-- dev profile: readable console + ring -->
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="PATTERN_CONSOLE"/>
+            <appender-ref ref="OBS_RING"/>
+        </root>
+    </springProfile>
+
+    <!-- default and prod: structured JSON + ring -->
+    <springProfile name="!dev">
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="OBS_RING"/>
+        </root>
+    </springProfile>
+
+</configuration>

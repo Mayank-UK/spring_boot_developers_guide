@@ -1,0 +1,266 @@
+spring:
+  application:
+    name: springboot-developers-guide
+  # Topic 13 (graphql): Spring for GraphQL, schema-first. Schema files load
+  # from classpath:graphql/** — the default extensions are .graphqls/.gqls,
+  # and this repo's schema file is posts.graphql, so the extension list
+  # gains .graphql alongside the defaults (flagged: the one non-GraphiQL
+  # graphql line this topic adds to the yaml).
+  graphql:
+    schema:
+      fileExtensions:
+        - .graphqls
+        - .graphql
+  # Topic 15 (grpc): the Netty gRPC server the spring-grpc server starter
+  # mounts, and the named client channel the demo console calls through. The
+  # client and server live in the same app (and therefore the same container),
+  # so localhost:9090 never leaves the process — no compose change needed.
+  grpc:
+    server:
+      port: 9090
+    client:
+      channels:
+        guide:
+          address: static://localhost:9090
+  # Phase 6 (data foundation): the PostgreSQL DataSource. Values come from the
+  # environment with localhost dev defaults (the docker-compose files override
+  # SPRING_DATASOURCE_URL to point at the postgres service). The explicit
+  # ${ENV:default} placeholders keep the defaults readable in this file — the
+  # twelve-factor way: same build, every environment, different env vars.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/guide}
+    username: ${SPRING_DATASOURCE_USERNAME:guide}
+    password: ${SPRING_DATASOURCE_PASSWORD:guide}
+    # HikariCP sized modestly: 8 connections serves the guide's demo load with
+    # headroom (PostgreSQL's default max_connections is 100; dev tools and
+    # Testcontainers siblings draw from the same budget).
+    hikari:
+      maximum-pool-size: 8
+  # Flyway OFF at startup — the deliberate Phase 6 decision. Migrations run
+  # PROGRAMMATICALLY (guide.data.sql.SchemaMigrator) when the posts area first
+  # switches to live data, because the app must boot and serve with PostgreSQL
+  # unreachable (degrade gracefully): autoconfig-run Flyway at startup would
+  # make PG a boot-time dependency. Topic 17 teaches the full reasoning.
+  flyway:
+    enabled: false
+  # Topic 18 (spring-data-jpa) — FLAGGED APPEND: adding JPA to the classpath
+  # autoconfigures an EntityManagerFactory AT BOOT, and Hibernate's factory
+  # bootstrap would normally connect to the database (dialect resolution reads
+  # JDBC metadata). That one connection would quietly break the
+  # degrade-gracefully rule the whole app is built on — AppBootsWithoutPostgres
+  # pins it. Three settings keep the factory build offline, each load-bearing:
+  #   database-platform — name Hibernate 7's dialect explicitly
+  #     (org.hibernate.dialect.PostgreSQLDialect; Hibernate 7.4.5.Final is the
+  #     Boot 4.1.1 BOM's version) so no metadata round trip is needed to
+  #     resolve it;
+  #   allow_jdbc_metadata_access: false — forbid JDBC metadata reads during
+  #     bootstrap outright. The classic advice "hibernate.temp.
+  #     use_jdbc_metadata_defaults=false" is DEAD HERE: that key is gone from
+  #     Hibernate 7's JdbcSettings (verified against the 7.4.5 jar); the
+  #     surviving key is hibernate.boot.allow_jdbc_metadata_access — the
+  #     gotcha this topic teaches, because it is exactly why apps fail to boot
+  #     without a database;
+  #   ddl-auto: none — schema belongs to Flyway (topics 16–17). Hibernate
+  #     neither creates nor validates at boot ("validate" would ALSO need a
+  #     connection; the schema check stays with SchemaMigrator).
+  # open-in-view: false — the OSIV switch: no lazily-holding persistence
+  #     context across the request; read paths end at DTOs before the
+  #     controller returns, so the view layer never triggers lazy loads.
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        boot:
+          allow_jdbc_metadata_access: false
+  # Topic 20 (redis) — FLAGGED APPEND: the Lettuce connection, localhost dev
+  # defaults with env overrides twelve-factor style (the compose files can
+  # point SPRING_DATA_REDIS_HOST at the redis service). No timeout tuning:
+  # the optional-service discipline keeps Redis off the boot path entirely
+  # (lazy adapters, listener container started only after a live PING
+  # succeeds), so these values only matter once a live call has already
+  # reached the server.
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+  # Topic 19 (mongodb) — FLAGGED APPEND: the connection string, localhost dev
+  # default with env override twelve-factor style (compose can point
+  # SPRING_DATA_MONGODB_URI at the mongo service). The URI form is the
+  # Mongo-idiomatic one and carries the client timeouts that make the
+  # optional-service discipline BEARABLE: serverSelectionTimeoutMS bounds
+  # how long a live call waits for an absent server before the typed
+  # 503 answers (2s here — the driver default of 30s would feel like a
+  # hang in a demo), connectTimeoutMS bounds the TCP dial itself. Nothing
+  # here connects at boot: the autoconfigured MongoClient builds lazily,
+  # and the live adapters sit behind @Lazy + LiveMongoArea's ping.
+  # (Structural note: topic 20's append created spring.data.redis and this
+  # topic's created a SECOND spring.data key — YAML forbids duplicate keys,
+  # so mongodb now nests under the SAME data: block. Content untouched.)
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/guide?serverSelectionTimeoutMS=2000&connectTimeoutMS=2000}
+  # Topic 23 (authentication) — FLAGGED APPEND: the security baseline.
+  # The JWT resource server's symmetric key. The env override is the
+  # twelve-factor way; the DEFAULT below is a clearly-marked DEV value —
+  # exactly the "dev default, never a production literal" discipline the
+  # secrets section of topic 25 hammers: production sets SDG_JWT_SECRET
+  # from a secret store, and anything HS256-signed with the default
+  # should be treated as demo material. Length matters too: HS256 needs
+  # >= 32 bytes, and the minter refuses shorter (JwtMinter's constructor
+  # enforces what nimbus would enforce at sign time).
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: ${SDG_JWT_SECRET:dev-only-sdg-jwt-hs256-secret-3b9d6f01c2a8e45d7f0b}
+  # Topic 25 (security) — FLAGGED NARROWING of topic 23's exclusion. The
+  # original blanket excluded BOTH grpc security autoconfigs after topic 23
+  # discovered they read the same resourceserver properties as the MVC
+  # resource server. Topic 25 replaces that reflex with a decision:
+  # - GrpcSecurityAutoConfiguration is NO LONGER EXCLUDED. What it registers
+  #   (the GrpcSecurity builder DSL + the servlet context-propagation
+  #   interceptor) is inert infrastructure until somebody configures rules —
+  #   keeping it ACTIVE is what makes the authenticated option a
+  #   configuration change instead of a classpath hunt.
+  # - The grpc OAuth2ResourceServerAutoConfiguration STAYS excluded, now for
+  #   a stated reason: it would silently inherit the MVC jwt secret and
+  #   demand Bearer auth on the demo gRPC surface, whose deliberate posture
+  #   is the explicit GrpcPostureInterceptor (permit-all stamped on the
+  #   wire, presented credentials REFUSED, never ignored) — see
+  #   domain/security/GrpcPostureInterceptor.java. Want gRPC authenticated?
+  #   Delete this exclusion and configure GrpcSecurity deliberately.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.grpc.server.autoconfigure.security.OAuth2ResourceServerAutoConfiguration
+  # Topic 27 (internationalization) — FLAGGED APPEND: the message bundles.
+  # Boot's MessageSourceAutoConfiguration builds the MessageSource from
+  # these three lines and nothing else — no bean, no code.
+  #   basename — the default is "messages" (classpath root); this repo keeps
+  #   its bundles in their own directory, so the basename is the
+  #   directory-qualified messages/messages (messages_*.properties there).
+  #   fallback-to-system-locale: false — the CLASSIC i18n production bug,
+  #   flipped off deliberately: with the default true, a locale that has no
+  #   bundle falls back to the JVM'S default locale, so the same build
+  #   answers Spanish visitors in English on one server and in German on
+  #   another (wherever the container's locale differs). false pins the
+  #   fallback floor to the BASE bundle (messages.properties) — same build,
+  #   same answer, every server.
+  #   encoding — UTF-8 is Boot's default already; restated because
+  #   .properties files are historically ISO-8859-1 (the \uXXXX escape
+  #   era) and this repo's bundles are literal UTF-8 on JDK 25.
+  messages:
+    basename: messages/messages
+    fallback-to-system-locale: false
+    encoding: UTF-8
+
+server:
+  port: 8080
+  # Topic 23 (authentication) — FLAGGED APPEND: the session cookie's
+  # attributes, the whole cookies-done-right section in three lines.
+  # http-only: JavaScript never reads the session id (XSS loses its
+  # easiest escalation). same-site: lax — the cookie rides same-site
+  # navigations but not cross-site POSTs (the CSRF dampener; the topic's
+  # CSRF notes explain why lax + stateless APIs is the deliberate mix).
+  # secure: env-toggled — true the moment TLS terminates the connection
+  # (prod behind the reverse proxy), false only for plain-HTTP dev.
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+# Topic 12 (api-documentation): springdoc-openapi. The OpenAPI document stays
+# at its default mount (/v3/api-docs — what the drift test and the terminal
+# companion read); the only override is where Swagger UI mounts, so the
+# interactive docs live at /docs — the guide-family convention the README
+# already promises. One property, zero code.
+springdoc:
+  swagger-ui:
+    path: /docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Topic 33 (observability) — FLAGGED WIDENING: "prometheus" joins
+        # health,info so the metrics section's terminal tour can curl
+        # /actuator/prometheus. The endpoint itself is mounted by the
+        # micrometer-registry-prometheus dependency; exposure is the only
+        # yaml line it needed. Everything else actuator serves stays
+        # unexposed — the surface grows only when a topic teaches it.
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  # Topic 33 (observability) — FLAGGED APPEND: trace SAMPLING. The Boot
+  # default is 0.1 (one trace in ten) — the right production default, but
+  # the wrong teaching default: the trace demo's whole point is that every
+  # tour run carries its one id across every hop, so this app samples
+  # everything (1.0). A real deployment keeps 0.1 (or tail-based sampling)
+  # and accepts that most traces are never recorded — sampling is the
+  # observability topic's honesty about cost: tracing EVERYTHING is how
+  # tracing becomes the thing you turn off.
+  tracing:
+    sampling:
+      probability: 1.0
+    # Topic 33 — FLAGGED APPEND, the load-bearing surprise of this topic's
+    # build (verified empirically): with Boot 4.1.1's Brave wiring, the MDC
+    # scope decorator that writes traceId/spanId into every log line is
+    # registered ONLY in the WITH-BAGGAGE branch of the autoconfiguration —
+    # the default (baggage off) traces fine but logs carry NO trace id.
+    # brave-context-slf4j is on the classpath for exactly this decorator;
+    # this switch is what actually activates it. Without these lines the
+    # one-id proof still works across spans, but log lines never join.
+    baggage:
+      enabled: true
+  # Phase 6 (data foundation): the process's health does NOT hinge on
+  # PostgreSQL. spring-boot-starter-jdbc mounts a DB health indicator that
+  # would mark /actuator/health DOWN whenever PG is unreachable — but this
+  # app is built to serve with PG down (degrade gracefully: the datasource
+  # is lazy and the posts area falls back to the in-memory adapter). PG is
+  # an on-demand dependency, not a liveness condition, so the DB indicator
+  # is off; the observability topic revisits this with the honest version
+  # (readiness that reports the live data mode).
+  health:
+    db:
+      enabled: false
+    # Topic 20 (redis): same verdict, same reason — spring-boot-starter-data-redis
+    # mounts a Redis health indicator that would mark the process DOWN whenever
+    # the server is absent, but an OPTIONAL service is not a liveness condition.
+    # The app boots and serves in fake mode; the typed 503 from LiveRedisArea is
+    # the honest per-call answer while the service is gone.
+    redis:
+      enabled: false
+    # Topic 19 (mongodb): same verdict, third time — spring-boot-starter-data-
+    # mongodb mounts a Mongo health indicator that would mark the process DOWN
+    # (after a server-selection wait) whenever MongoDB is absent, but an
+    # OPTIONAL service is not a liveness condition. The app boots and serves
+    # the seeded console in fake mode; the typed 503 from LiveMongoArea is the
+    # honest per-call answer while the service is gone.
+    # FLAGGED BOOT 4 GOTCHA (proven by a health-components diagnostic): the
+    # indicator's NAME is "mongodb", not "mongo" — @ConditionalOnEnabledHealth
+    # Indicator(value="mongodb") in spring-boot-mongodb 4.1.1 — so the classic
+    # management.health.mongo.enabled spelling is SILENTLY IGNORED and the
+    # indicator still mounts (and reports DOWN). The "d" is load-bearing.
+    mongodb:
+      enabled: false
+
+# ── Topic 13 (graphql): DEV-ONLY document ────────────────────────────────────
+# GraphiQL, the in-browser schema explorer, mounts at /graphiql when the dev
+# profile is active (docker-compose.yml sets SPRING_PROFILES_ACTIVE=dev).
+# Profile-activation keeps prod clean: the default and prod profiles never
+# load this document, so the IDE route is not mapped there — the topic's
+# default-profile test pins /graphiql answering only the app's unrouted-path
+# envelope outside dev.
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  graphql:
+    graphiql:
+      enabled: true

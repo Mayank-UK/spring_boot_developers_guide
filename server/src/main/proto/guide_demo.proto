@@ -1,0 +1,59 @@
+// Topic 15 (grpc) — the contract this topic teaches from. One file, four rpc
+// kinds, deliberately small: everything the generated server base and client
+// stubs need, and nothing else. The codegen section of the topic compiles
+// exactly this file into guide.demo.grpc.* Java sources at build time.
+syntax = "proto3";
+
+package guide.demo;
+
+option java_package = "guide.demo.grpc";
+option java_multiple_files = true;
+
+// The four interaction kinds gRPC offers, one service, one specimen each.
+service GuideDemo {
+  // UNARY: one request, one response — the RPC that behaves like a function.
+  rpc GetTopicInfo(TopicInfoRequest) returns (TopicInfoResponse);
+
+  // SERVER STREAMING: one request, a stream of responses, closed by the server.
+  rpc StreamSectionTitles(TopicInfoRequest) returns (stream SectionTitle);
+
+  // CLIENT STREAMING: a stream of requests from the client, one summary back.
+  rpc AckSections(stream SectionTitle) returns (AckSummary);
+
+  // BIDIRECTIONAL STREAMING: both sides stream; turns arrive when they happen.
+  rpc EchoChat(stream ChatMessage) returns (stream ChatMessage);
+}
+
+message TopicInfoRequest {
+  // Field numbers are the wire identity of a field — see the-idiom section.
+  string topic_id = 1;
+
+  // Artificial server-side work, so the deadline demo has something to miss.
+  int32 delay_ms = 2;
+}
+
+message TopicInfoResponse {
+  string topic_id = 1;
+  string title = 2;
+  string group = 3;
+  int32 section_count = 4;
+}
+
+message SectionTitle {
+  string section_id = 1;
+  string title = 2;
+}
+
+message AckSummary {
+  int32 received = 1;
+  int32 acknowledged = 2;
+  string note = 3;
+}
+
+message ChatMessage {
+  string sender = 1;
+  string body = 2;
+
+  // Assigned by the SERVER on echo — proof the round trip really happened.
+  int32 sequence = 3;
+}

@@ -1,0 +1,22 @@
+# Maven build output (any depth — server/target/)
+target/
+# JS installs & build output
+node_modules/
+dist/
+# Env files stay out of git
+.env*
+# Test coverage (JaCoCo / Vitest HTML reports)
+coverage/
+# Topic 26 (files-media): the file store's runtime home — uploaded bytes and
+# metadata sidecars are runtime data, never source (server/data/files/, plus
+# the throwaway store the tests point the storage-dir property at).
+server/data/
+*.log
+# OS
+.DS_Store
+# IDE dirs
+.idea/
+*.iml
+.vscode/
+# In-container flock targets for verification runs (runtime artifacts)
+.verify.lock

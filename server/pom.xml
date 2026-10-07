@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>guide</groupId>
+    <artifactId>server</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>springboot-developers-guide-server</name>
+    <description>Server of the Spring Boot Developer's Guide — the typed content API that is the guide.</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <!-- Topic 15 (grpc): aligned by the spring-grpc BOM below; kept explicit
+             here so the codegen plugin and the runtime libraries can never
+             drift apart (protoc and protobuf-java must match; the grpc-java
+             codegen binary must match grpc-java at runtime). -->
+        <protobuf-java.version>4.33.4</protobuf-java.version>
+        <grpc.version>1.77.1</grpc.version>
+        <spring-grpc.version>1.0.3</spring-grpc.version>
+    </properties>
+
+    <!-- Topic 15 (grpc): one BOM aligns spring-grpc (1.0.3, built against
+         Spring Boot 4) with the grpc-java and protobuf versions it was tested
+         with — the four grpc artifacts below declare no versions on purpose. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.grpc</groupId>
+                <artifactId>spring-grpc-dependencies</artifactId>
+                <version>${spring-grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Topic 06 (aop): the AspectJ weaver + @EnableAspectJAutoProxy
+             autoconfiguration — the machinery behind the app's InvocationTraceAspect.
+             (Boot 4 renamed this starter from the classic spring-boot-starter-aop.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Spring Boot 4 modularized test slices: @WebMvcTest lives here, no longer in
+             spring-boot-test-autoconfigure (classic spring-boot-starter-test). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Phase 6 (data foundation): Testcontainers — real PostgreSQL in
+             tests, never H2 (one dialect is a project decision). Versionless:
+             the Boot 4.1.1 BOM imports testcontainers-bom 2.0.5. FLAGGED
+             RENAMES in the Testcontainers 2.x line: the classic artifacts
+             junit-jupiter / postgresql became testcontainers-junit-jupiter /
+             testcontainers-postgresql (the 1.x names stop at 1.21.4 on
+             Central); the class API is unchanged
+             (org.testcontainers.containers.PostgreSQLContainer,
+             org.testcontainers.junit.jupiter.@Testcontainers/@Container).
+             spring-boot-testcontainers adds @ServiceConnection, so a container
+             field feeds the autoconfigured DataSource directly — no
+             @DynamicPropertySource wiring needed. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Topic 12 (api-documentation): springdoc-openapi, the Spring-idiomatic
+             OpenAPI generator + Swagger UI mount. Version chosen from Maven Central:
+             the 3.x line targets Spring Boot 4 / Framework 7 (its parent POM is
+             spring-boot-starter-parent 4.1.0 — this repo's exact Boot minor), and
+             3.1.1 is the line's latest stable (verified 2026-10-06). The 2.x line
+             ends at Boot 3.x and must not be used here. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <!-- Topic 13 (graphql): Spring for GraphQL — schema-first over the
+             existing posts substrate. Boots the /graphql HTTP endpoint beside
+             MVC, discovers schema/*.graphql files, and binds @QueryMapping/
+             @SchemaMapping/@BatchMapping/@MutationMapping controllers.
+             Versionless: the Boot 4.1.1 BOM manages it (spring-graphql 2.0.5,
+             graphql-java 25 — verified against spring-boot-dependencies
+             4.1.1). Tests drive the endpoint with raw JSON over MockMvc, so
+             no graphql-test starter is needed. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql</artifactId>
+        </dependency>
+        <!-- Phase 6 (data foundation): JDBC access — spring-jdbc's JdbcTemplate
+             (the DAO tool topics 16–18 teach with) plus HikariCP, the connection
+             pool Boot autoconfigures under the DataSource. The pool is LAZY:
+             nothing connects at boot, which is what lets the app start and
+             serve with PostgreSQL unreachable (the degrade-gracefully rule). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- The PostgreSQL JDBC driver, runtime scope on purpose: compile code
+             speaks JDBC (java.sql.*) and never imports org.postgresql — scope
+             enforces the rule. Versionless: managed by the Boot BOM (42.7.13). -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Flyway, versionless through the Boot BOM (flyway 12.4.0, verified
+             against spring-boot-dependencies 4.1.1). Since Flyway 10 the
+             database-specific support lives in its own artifact — flyway-core
+             alone cannot talk to PostgreSQL. Runs PROGRAMMATICALLY from
+             guide.data.sql.SchemaMigrator (spring.flyway.enabled=false in
+             application.yml): migrations must not gate application startup. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <!-- Topic 18 (spring-data-jpa): Spring Data JPA + Hibernate. Versionless
+             through the Boot 4.1.1 BOM, which ships Hibernate ORM 7.4.5.Final
+             (verified against spring-boot-dependencies). FLAGGED PAIR, per the
+             Boot 4 modularization: the runtime starter is the classic
+             spring-boot-starter-data-jpa, while @DataJpaTest's slice lives in
+             its own artifact — spring-boot-starter-data-jpa-test — because
+             Boot 4 moved every test slice out of spring-boot-test-autoconfigure
+             into per-technology modules (same story as @WebMvcTest needing
+             spring-boot-webmvc-test above). Both artifactIds verified on
+             Central; omit the test one and @DataJpaTest simply never runs. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Topic 20 (redis): Spring Data Redis over Lettuce (the starter's
+             default client — Netty-based, multiplexed, no extra coordinates).
+             Versionless through the Boot 4.1.1 BOM. Autoconfiguration creates
+             the RedisConnectionFactory + StringRedisTemplate beans LAZILY
+             connected (Lettuce opens its first socket on first command), and
+             this repo's optional-service discipline completes the story: the
+             demo adapters are @Lazy, the listener container starts only after
+             a live PING succeeds (LiveRedisArea), and management.health.redis
+             .enabled=false keeps /actuator/health from making an absent Redis
+             a boot-time verdict. TESTS, FLAGGED after verifying on Central
+             (2026-10-06): Testcontainers ships NO first-class Redis module —
+             org.testcontainers has no redis artifact in the 1.x line nor in
+             the renamed 2.x line (repo1 directory listing checked; only
+             third-party com.redis:testcontainers-redis 2.2.4 exists, built
+             against the TC 1.x / Boot 3.4 world). Honest fallback, zero extra
+             coordinates: the live tests boot redis:7-alpine (the compose
+             image) via plain GenericContainer on exposed port 6379 — the
+             core testcontainers jar already arrives transitively through
+             testcontainers-junit-jupiter. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Topic 19 (mongodb): Spring Data MongoDB — MongoTemplate (the
+             Criteria/Aggregation engine the visits store speaks) plus the
+             driver sync client, versionless through the Boot 4.1.1 BOM
+             (mongodb-driver 5.8.1, spring-data-mongodb via spring-data-bom
+             2026.0.1 — verified against spring-boot-dependencies 4.1.1).
+             The autoconfigured MongoClient builds WITHOUT opening a
+             connection (driver pools connect on first operation), so the
+             optional-service discipline survives: nothing Mongo-shaped
+             gates boot, and the live adapters are @Lazy anyway.
+             management.health.mongo.enabled=false in application.yml keeps
+             an absent MongoDB from being an /actuator/health verdict (the
+             same flagged call the db and redis indicators got). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+        <!-- TESTS, FLAGGED RENAMED ARTIFACT (verified on repo1 Central,
+             2026-10-06): Testcontainers 2.x's Mongo module is
+             org.testcontainers:testcontainers-mongodb — the 1.x artifact
+             "mongodb" stops at 1.21.3 and does not exist in the 2.x line.
+             Versionless: the Boot BOM's testcontainers-bom 2.0.5 manages
+             2.0.5 exactly (metadata listing checked). Class API:
+             org.testcontainers.mongodb.MongoDBContainer (NEW package in
+             2.x — the old org.testcontainers.containers.MongoDBContainer
+             remains as a deprecated twin) with getConnectionString();
+             @ServiceConnection support for BOTH container classes ships
+             inside spring-boot-mongodb (MongoDbContainerConnectionDetails-
+             Factory / Deprecated...Factory — jar listing verified). -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mongodb</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Topic 15 (grpc): Spring's official gRPC integration — the Netty
+             server starter (@GrpcService beans bind to it)
+             and registers gRPC reflection + health services; the client
+             starter auto-configures GrpcChannelFactory for named channels.
+             Versions come from the spring-grpc-dependencies BOM above. -->
+        <dependency>
+            <groupId>org.springframework.grpc</groupId>
+            <artifactId>spring-grpc-server-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.grpc</groupId>
+            <artifactId>spring-grpc-client-spring-boot-starter</artifactId>
+        </dependency>
+        <!-- The generated guide.demo.grpc code compiles against these two
+             (grpc-netty arrives transitively via both starters); versionless
+             through the BOM so they stay aligned with the codegen binary. -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+        </dependency>
+        <!-- Topic 23 (authentication) — FLAGGED APPEND, the app's security
+             baseline. spring-boot-starter-security puts Spring Security 7 on
+             the classpath and autoconfigures the filter chain this topic's
+             SecurityConfig replaces (guide/config/SecurityConfig.java).
+             Empirical Boot 4 note: the modularized @WebMvcTest slice does NOT
+             import the security autoconfigurations, so pre-existing slices
+             kept passing untouched — security behavior is tested in
+             full-context @SpringBootTest integration tests instead. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <!-- Topic 23 (authentication): the resource-server side of the JWT
+             demo — validates Bearer tokens instead of issuing them (nimbus-
+             jose-jwt arrives transitively for minting as well). Versionless
+             through the Boot 4.1.1 BOM. The symmetric HS256 key comes from
+             spring.security.oauth2.resourceserver.jwt.secret-key in
+             application.yml (env-overridable, clearly-marked dev default). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+        <!-- Topic 25 (security) — FLAGGED NEW DEP, artifact CHOICE VERIFIED on
+             repo1 Central 2026-10-06: Bucket4j's token-bucket engine. There is
+             NO first-party Boot integration — "spring-boot-starter-bucket4j"
+             returns zero results on Central; the only Spring Boot starter in
+             the ecosystem is the THIRD-PARTY com.giffing.bucket4j
+             :bucket4j-spring-boot-starter (0.12.10), built for the Boot 3.x
+             servlet world and property-driven in a way that would hide the
+             machinery this guide teaches. Chosen instead: the framework-
+             agnostic core jar for JDK 17+, latest line 8.21.0 (repo1
+             maven-metadata, updated 2026-10-02) — no Spring coupling at all,
+             therefore Boot-4 compatible by construction, wired explicitly as
+             a bean like every other adapter in this app. -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.21.0</version>
+        </dependency>
+        <!-- Topic 23 (authentication): @WithMockUser / csrf() request
+             post-processors for security-aware MockMvc tests. Versionless:
+             managed by the Boot BOM's spring-security-bom import. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Topic 28 (realtime): the WebSocket substrate — spring-websocket
+             (WebSocketHandler / WebSocketConfig / the client Spring uses in
+             its own tests) plus tomcat-embed-websocket, the server-side
+             jakarta.websocket implementation Tomcat hands the HTTP upgrade
+             to. Versionless through the Boot 4.1.1 BOM. Nothing here pulls
+             WebFlux or STOMP — the topic teaches the RAW handler; the
+             messaging-subprotocol layer is deliberately out of scope. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <!-- Topic 26 (files-media) — FLAGGED NEW DEP, version verified on repo1
+             Central (maven-metadata, latest line 0.4.21, updated 2025-10-02):
+             Thumbnailator, the single-jar image-resizing library. Chosen over
+             imgscalr (dormant since 2019) and hand-rolled java.awt scaling:
+             a fluent API over BufferedImage that handles EXIF orientation,
+             preserves aspect within a bounding box, and re-encodes to any
+             format — everything a thumbnail endpoint needs with no native
+             dependencies and no framework coupling (wired as a plain library
+             call inside the CreateThumbnail use case, not a Boot starter:
+             no such starter exists and none is wanted). -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>0.4.21</version>
+        </dependency>
+        <!-- Topic 33 (observability) — FLAGGED NEW DEP, version CHOSEN on repo1
+             Central (2026-10-06): logstash-logback-encoder 9.0 (the line's
+             latest stable; maven-metadata). NOT managed by the Boot BOM, so
+             the version is explicit. Compatibility verified against the
+             published poms: 9.0 builds on Logback 1.5.20 provided-scope and
+             bytecode-targets Java 17 (major 61 checked in the jar) — this
+             repo's Boot 4.1.1 BOM ships Logback 1.5.38 on Java 25, so the
+             encoder's floor is comfortably met. This is the LogstashEncoder
+             behind the JSON personality in logback-spring.xml. -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>9.0</version>
+        </dependency>
+        <!-- Topic 33 (observability) — FLAGGED PAIR for tracing, both
+             versionless through the Boot 4.1.1 BOM (micrometer-tracing-bom
+             1.7.1 + Boot's own module line 4.1.1). Boot 4 modularization
+             gotcha: there is NO spring-boot-starter-micrometer-tracing (404
+             on Central — verified) — the tracing autoconfigurations live in
+             spring-boot-micrometer-tracing / spring-boot-micrometer-tracing
+             -brave, and the BRIDGE to Brave itself is the plain micrometer
+             artifact. The pair together give: Brave tracer + W3C traceparent
+             propagation (Boot's default), trace/span ids in MDC for the JSON
+             logs, and Boot's collection of SpanReporter beans (the teaching
+             RecordingSpanReporter rides exactly that hook). -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-micrometer-tracing-brave</artifactId>
+        </dependency>
+        <!-- Topic 33 (observability) — FLAGGED NEW DEP: the prometheus
+             registry, versionless through the Boot BOM (micrometer 1.17.1
+             via micrometer-bom). Makes /actuator/prometheus serve the
+             exposition format the metrics section tours; without it the
+             metrics summary's prometheus excerpt degrades to empty (see
+             data/obs/PrometheusExcerpt). -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <!-- Topic 33 (observability) — FLAGGED NEW DEP: the RestClient
+             starter, versionless through the Boot BOM. Before this, the app
+             had NO autoconfigured RestClient.Builder (topic 12 builds its
+             self-fetch client by hand for exactly that reason) — and the
+             trace probe's HTTP self-call needs one: the autoconfigured
+             builder is OBSERVATION-INSTRUMENTED, which is the very
+             machinery that propagates traceparent automatically on
+             instrumented clients (the probe ALSO stamps the header by hand
+             so the mechanism stays visible). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+        <!-- Topic 33 (observability) — FLAGGED NEW DEP: Brave's SLF4J MDC
+             scope decorator, versionless through the Boot BOM (brave-bom
+             6.3.1 import). Without it the Brave bridge traces fine but
+             NEVER writes traceId/spanId into MDC — the JSON logs and the
+             hop's MDC echo come back id-less (empirically confirmed: the
+             autoconfiguration wires brave.context.slf4j.MDCScopeDecorator
+             only when this artifact is present, and the bridge itself does
+             not pull it). This is the one-line cost of "trace ids IN the
+             logs", and it is what makes the one-id-across-hops proof join
+             spans to log lines at all. -->
+        <dependency>
+            <groupId>io.zipkin.brave</groupId>
+            <artifactId>brave-context-slf4j</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- Topic 15 (grpc): protobuf codegen. Runs protoc (downloaded from
+                 Maven Central) over src/main/proto and then the grpc-java
+                 binary plugin over protoc's descriptor output — both steps land
+                 in target/generated-sources/protobuf, which Maven compiles like
+                 any other source root. The ascopes plugin is actively
+                 maintained and supports current JDKs (the classic
+                 org.xolstice plugin is effectively dormant). -->
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>5.1.11</version>
+                <configuration>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
+                    </sourceDirectories>
+                    <protoc kind="binary-maven">
+                        <version>${protobuf-java.version}</version>
+                    </protoc>
+                    <plugins>
+                        <plugin kind="binary-maven">
+                            <groupId>io.grpc</groupId>
+                            <artifactId>protoc-gen-grpc-java</artifactId>
+                            <version>${grpc.version}</version>
+                        </plugin>
+                    </plugins>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

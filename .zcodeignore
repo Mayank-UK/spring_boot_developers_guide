@@ -1,0 +1,7 @@
+# Keep ZCode's file search/reads away from generated bulk — source lives in
+# server/src, client/src, and the root docs.
+target/
+node_modules/
+dist/
+coverage/
+.git/
