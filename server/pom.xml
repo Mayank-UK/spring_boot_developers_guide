@@ -25,7 +25,7 @@
              codegen binary must match grpc-java at runtime). -->
         <protobuf-java.version>4.33.4</protobuf-java.version>
         <grpc.version>1.77.1</grpc.version>
-        <spring-grpc.version>1.0.3</spring-grpc.version>
+        <spring-grpc.version>1.1.1</spring-grpc.version>
     </properties>
 
     <!-- Topic 15 (grpc): one BOM aligns spring-grpc (1.0.3, built against
