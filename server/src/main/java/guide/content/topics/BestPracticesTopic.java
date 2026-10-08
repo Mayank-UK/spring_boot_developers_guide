@@ -287,7 +287,7 @@ public final class BestPracticesTopic {
                 section("git-review", "Git and review: the suite is the definition of done",
                         "The workflow practices are what keep every other practice honest. Small diffs, CI on every push, and a review culture that reads tests before prose.",
                         text("bp:git-intro", """
-                                THE GIT PRACTICE THIS REPO MODELS: THE SUITE IS THE DEFINITION OF DONE, AND CI RUNS IT ON EVERY PUSH. The workflow file is short enough to read in one sitting and that brevity is the point — per package, one job, the same commands a developer runs locally (mvn -B test; npm ci, test, build), so a green check on a pull request MEANS the same thing a green terminal means. Every guard this topic has named is in that suite: the dependency-rule test scans imports, the snippet-source test verifies teaching code against real files, drift tests pin the OpenAPI paths. A best practice that lives only in a CONVENTIONS.md is a suggestion; the same practice wired into CI is a floor:
+                                THE GIT PRACTICE THIS REPO MODELS: THE SUITE IS THE DEFINITION OF DONE, AND CI RUNS IT ON EVERY PUSH. The workflow file is short enough to read in one sitting and that brevity is the point — per package, one job, the same commands a developer runs locally (mvn -B verify — verify, not test, so the JaCoCo coverage gate bound to that phase is enforced in CI too; npm ci, test, build), so a green check on a pull request MEANS the same thing a green terminal means. Every guard this topic has named is in that suite: the dependency-rule test scans imports, the snippet-source test verifies teaching code against real files, drift tests pin the OpenAPI paths. A best practice that lives only in a CONVENTIONS.md is a suggestion; the same practice wired into CI is a floor:
                                 """),
                         code("bp:ci", "yaml",
                                 ".github/workflows/ci.yml — the definition of done, on every push: per package, the same commands a developer runs locally",
@@ -306,7 +306,7 @@ public final class BestPracticesTopic {
                                           java-version: 25
                                           cache: maven
                                           cache-dependency-path: server/pom.xml
-                                      - run: mvn -B test"""),
+                                      - run: mvn -B verify"""),
                         text("bp:git-close", """
                                 Around CI, the git habits that make review possible: SMALL DIFFS (a pull request a reviewer can hold in their head gets a real review; a 3000-line Friday dump gets a glance and an approve), COMMITS THAT EXPLAIN WHY (the diff already says what), and TESTS REVIEWED AS CODE (the reviewer's first question for a new endpoint is 'where is its test?', because in this repo every demo endpoint arrives with one — the invariant that keeps 1100+ tests meaningful rather than aspirational). The branch discipline is deliberately boring: trunk-based with short-lived branches, because the expensive part of git workflow is not merging, it is DRIFT — the longer a branch lives, the more it diverges from the truth CI is defending. Ship small, ship often, let the suite say no.""")),
                 section("human-practices", "Human practices: write for the next engineer",

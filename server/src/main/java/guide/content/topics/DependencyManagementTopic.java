@@ -260,7 +260,7 @@ public final class DependencyManagementTopic {
                                     java-version: 25
                                     cache: maven
                                     cache-dependency-path: server/pom.xml
-                                - run: mvn -B test
+                                - run: mvn -B verify
                                 """),
                         text("up:rollback", """
                                 One more upgrade mechanic that earns its keep: ROLLBACK IS A DEPENDENCY PROPERTY. Because the artifact is immutable and versioned (Central never overwrites a release), reverting is re-pointing the pom at the old coordinate and re-deploying — minutes, not archaeology. That is precisely what SNAPSHOTs destroy (a re-built snapshot cannot be rolled back to, because the bytes changed under the same version), and why the versions-scopes section's radioactivity rule exists. Upgrades without fear is not a feeling; it is radar (versions plugin), rhythm (the rubric), a net (the suite in CI), and an undo (immutable versions).""")),

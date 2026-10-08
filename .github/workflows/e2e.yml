@@ -1,0 +1,81 @@
+# Host-run Playwright E2E against the real dev stack — a manual/weekly
+# complement to ci.yml (which stays fast and stackless). Spins the compose
+# stack exactly like a developer would, waits for it to be genuinely ready,
+# runs the suite, and ALWAYS tears the stack down.
+name: E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Monday 03:00 UTC — off-peak smoke of the full running guide.
+    - cron: "0 3 * * 1"
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Create the external cache volumes compose expects
+        run: docker volume create sbdg-m2 && docker volume create sbdg-npm
+
+      - name: Start the dev stack
+        run: docker compose -f .docker/docker-compose.yml up -d
+
+      - name: Wait for the stack (server health + client serving)
+        run: |
+          set -u
+          wait_for() {
+            name="$1" url="$2" deadline=$(( $(date +%s) + 1200 ))
+            until curl -sf -o /dev/null "$url"; do
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "::error::$name never became reachable at $url"
+                docker compose -f .docker/docker-compose.yml ps
+                docker compose -f .docker/docker-compose.yml logs --tail=150 "$3"
+                exit 1
+              fi
+              sleep 5
+            done
+            echo "$name is up ($url)"
+          }
+          # Cold boot downloads all Maven deps inside the server container —
+          # give it a generous 20-minute budget before failing honestly.
+          wait_for server http://localhost:8080/api/health server
+          wait_for client http://localhost:5176 client
+
+      - name: Install the suite
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Typecheck the suite
+        working-directory: e2e
+        run: npm run typecheck
+
+      - name: Run the suite
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Tear the stack down
+        if: always()
+        run: docker compose -f .docker/docker-compose.yml down
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7

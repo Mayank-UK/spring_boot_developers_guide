@@ -565,6 +565,130 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Phase 12 (hardening): JaCoCo coverage GATES — guardrails, not
+                 aspirations. prepare-agent attaches the execution recorder for
+                 every surefire run (initialize); report writes target/site/
+                 jacoco/ (verify); check enforces LINE-coverage floors (verify,
+                 after report). MEASURED FIRST (2026-10-08, full 1163-test run,
+                 jacoco 0.8.15 pinned versionless by the Boot parent): bundle
+                 LINE coverage 88.4%; every floor below sits a few points under
+                 the real number of the population it gates — the gate exists
+                 to catch regressions, not to nag for more tests. LINE counter
+                 only (the unit a human reasons about); BUNDLE + PACKAGE
+                 elements only (per-class rules are churn); nothing excluded
+                 from measurement — the thin/generated packages get their own
+                 LOW floor instead (see the last rule) because excluding them
+                 would hide real collapse. Scoped runs (-Dtest=...) are
+                 unaffected: they stop at the test phase, before verify. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <rules>
+                    <!-- Whole-app floor: measured 88.4% line
+                         coverage; 0.85 = 3.4 pts of headroom. -->
+                    <rule>
+                        <element>BUNDLE</element>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.85</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                    <!-- Every hand-written package except the
+                         thin/generated three below. The floor is
+                         defined by the lowest of them
+                         (guide.data.testing, 60% on a 10-line
+                         package): a ratio that small swings >5
+                         pts per LINE, so 0.50 (two lines of
+                         grace) is the least-flaky floor that
+                         still trips when a package's wiring
+                         collapses. Next-lowest measured: 66.7%. -->
+                    <rule>
+                        <element>PACKAGE</element>
+                        <excludes>
+                            <exclude>guide</exclude>
+                            <exclude>guide.data.aop</exclude>
+                            <exclude>guide.demo.grpc</exclude>
+                        </excludes>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.50</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                    <!-- Flagship tier: the biggest, most central
+                         packages get a tighter floor. Tier minimum
+                         measured 95.2% (presentation.demo);
+                         content 100%, content.topics 100%,
+                         config 97.9%. -->
+                    <rule>
+                        <element>PACKAGE</element>
+                        <includes>
+                            <include>guide.config</include>
+                            <include>guide.content</include>
+                            <include>guide.content.topics</include>
+                            <include>guide.presentation.demo</include>
+                        </includes>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.90</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                    <!-- Thin/generated tier, LOW floors rather
+                         than exclusions, reasons stated:
+                         guide = GuideApplication only (3 lines,
+                         main() measured 33%); guide.data.aop =
+                         35-line adapter exercised through live
+                         demos (14.3%); guide.demo.grpc =
+                         protobuf/gRPC CODEGEN stubs — uncovered
+                         lines there are generated artifacts no
+                         one maintains (39.8%, 1436 lines). -->
+                    <rule>
+                        <element>PACKAGE</element>
+                        <includes>
+                            <include>guide</include>
+                            <include>guide.data.aop</include>
+                            <include>guide.demo.grpc</include>
+                        </includes>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.10</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                    </rules>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

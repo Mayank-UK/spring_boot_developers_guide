@@ -422,7 +422,7 @@ public final class TestingTopic {
                                           java-version: 25
                                           cache: maven
                                           cache-dependency-path: server/pom.xml
-                                      - run: mvn -B test
+                                      - run: mvn -B verify
                                 """),
                         text("ci:notes", """
                                 The details that make it honest: the server job needs no service containers because the suite's Testcontainers boots its own postgres (the runner's Docker daemon is the only prerequisite ubuntu-latest provides for free); the caches are keyed by the inputs that invalidate them (the pom for Maven, the lockfile for npm) so a dependency bump pays exactly one cold run; and the client job ends with npm run build because a type error that survives the tests must still die in CI — build is part of the contract, not a bonus.

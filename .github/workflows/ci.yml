@@ -1,7 +1,9 @@
 # CI — same contract as the devcontainer definition-of-done, per package:
-# server: mvn -B test · client: npm ci → test → build. Tests run against
+# server: mvn -B verify · client: npm ci → test → build. Tests run against
 # whatever each package's suite needs (the server suite uses Testcontainers
 # where real engines are required — no service containers wired here yet).
+# `verify` (not `test`) so the JaCoCo LINE-coverage gate — bound to the verify
+# phase in server/pom.xml — is enforced in CI exactly as in local full runs.
 name: CI
 
 on:
@@ -22,7 +24,7 @@ jobs:
           java-version: 25
           cache: maven
           cache-dependency-path: server/pom.xml
-      - run: mvn -B test
+      - run: mvn -B verify
 
   client:
     runs-on: ubuntu-latest
