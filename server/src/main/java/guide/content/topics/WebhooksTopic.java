@@ -59,6 +59,15 @@ public final class WebhooksTopic {
                                 /** lower-case dot.notation, segments may contain digits and hyphens: invoice.paid, order.fulfilled-early */
                                 private static final Pattern EVENT_TYPE = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*(\\\\.[a-z0-9]+(-[a-z0-9]+)*)*");
 
+                                // … inside the compact constructor — url/secret checks above, then:
+                                for (String eventType : eventTypes) {
+                                    if (!isValidEventType(eventType)) {
+                                        throw new IllegalArgumentException(
+                                                "event type must be lower-case dot notation, past tense: " + eventType);
+                                    }
+                                }
+
+                                // … the helper the constructor leans on:
                                 public static boolean isValidEventType(String eventType) {
                                     return eventType != null && EVENT_TYPE.matcher(eventType).matches();
                                 }"""),

@@ -105,7 +105,7 @@ public final class DependencyManagementTopic {
                         text("ver:scopes", """
                                 SCOPES are architecture, not bookkeeping — they decide which jars exist at compile time, at runtime, and in tests, and the wrong scope is a design leak the build enforces or permits. COMPILE (the default) is on the classpath everywhere: spring-web, your domain code's foundation. RUNTIME ships in the artifact but is invisible to your source — this repo's sharpest example is the PostgreSQL driver, runtime ON PURPOSE so that no code can ever import org.postgresql and couple the domain to one database: compile code speaks java.sql, and the scope mechanically enforces the rule. TEST (JUnit, Mockito, AssertJ, the Testcontainers modules) never leaves the build — a production runtime that somehow loaded them would be a packaging bug made visible. PROVIDED expects the platform to supply it at runtime (servlet-API territory; Boot hides this one from you). And OPTIONAL (devtools below) means "my consumers probably don't want this transitively" — devtools is developer-experience tooling flagged optional so a deployed artifact does not drag it along:"""),
                         code("ver:scopes-pom", "xml",
-                                "server/pom.xml — three scopes doing three different jobs: dev-experience isolation, test-only machinery, driver isolation",
+                                "server/pom.xml — three scopes doing three different jobs (entries gathered from their separate places in the list): dev-experience isolation, test-only machinery, driver isolation",
                                 "server/pom.xml", """
                                 <dependency>
                                     <groupId>org.springframework.boot</groupId>
@@ -113,11 +113,13 @@ public final class DependencyManagementTopic {
                                     <scope>runtime</scope>
                                     <optional>true</optional>
                                 </dependency>
+                                <!-- … intervening entries elided — gathered here for comparison … -->
                                 <dependency>
                                     <groupId>org.testcontainers</groupId>
                                     <artifactId>testcontainers-postgresql</artifactId>
                                     <scope>test</scope>
                                 </dependency>
+                                <!-- … intervening entries elided … -->
                                 <dependency>
                                     <groupId>org.postgresql</groupId>
                                     <artifactId>postgresql</artifactId>

@@ -299,7 +299,7 @@ public final class SpringCoreTopic {
                                 "guide/data/spring/AppInfoAdapter.java — the whole real listener: type-routed, synchronous, one write",
                                 "server/src/main/java/guide/data/spring/AppInfoAdapter.java", """
                                 public final class AppInfoAdapter implements AppInfoSource, ApplicationListener<ApplicationReadyEvent> {
-                                    // … construction elided; the field below is written once, on READY: …
+                                    // … the adapter's AppInfoSource reads elided; the field below is written once, on READY: …
                                     private volatile long readyAtEpochMillis;
 
                                     @Override

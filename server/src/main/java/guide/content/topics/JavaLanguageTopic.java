@@ -184,11 +184,16 @@ public final class JavaLanguageTopic {
                                 "server/src/main/java/guide/core/scenario/ScenarioStore.java", """
                                 public final class ScenarioStore {
 
+                                    private final ScenarioState initial;
                                     private final Map<String, ScenarioDataMode> areaModes = new ConcurrentHashMap<>();
                                     private volatile ScenarioState state;
-                                    // … constructor and getters elided …
+                                    // … constructors and getters elided …
 
-                                    /** Read-modify-write on shared state — the lock is what makes it atomic. */
+                                    /**
+                                     * Applies a partial update (null fields keep their current value) and
+                                     * returns the new state. Values are typed here, so the only invariant left
+                                     * to defend is non-nullness — the controller validates the raw body first.
+                                     */
                                     public synchronized ScenarioState apply(ScenarioPatch patch) {
                                         Objects.requireNonNull(patch, "patch");
                                         ScenarioState current = state;
@@ -283,14 +288,17 @@ public final class JavaLanguageTopic {
                         text("pkg:maven", """
                                 Maven turns the rest into conventions you stop thinking about. Source lives in src/main/java, tests in src/test/java; compilation lands in target/classes; the spring-boot-maven-plugin assembles the boot jar in target. Coordinates — groupId, artifactId, version — name every artifact uniquely, and because the parent POM manages versions, your own dependency list stays one line per starter, with no version numbers to drift out of date.
 
-                                The application.yml beside the code is the runtime counterpart to the build: structure the artifact with Maven, structure the running process with configuration. Both are quoted here exactly as this server ships them."""),
+                                The application.yml beside the code is the runtime counterpart to the build: structure the artifact with Maven, structure the running process with configuration. Both are quoted from this server as it ships — the yml's elision hides the per-topic blocks that later chapters add under the same keys."""),
                         code("pkg:yml", "yaml",
-                                "server/src/main/resources/application.yml — the running process's shape, verbatim",
+                                "server/src/main/resources/application.yml — the running process's shape: the name it reports, the port it owns",
                                 "server/src/main/resources/application.yml", """
                                 spring:
                                   application:
                                     name: springboot-developers-guide
 
+                                  # … graphql, grpc, datasource, jpa, data-redis, data-mongodb,
+                                  #     security, web — every later topic's block lives under
+                                  #     this same spring: key …
                                 server:
                                   port: 8080""")),
                 section("generics-erasure-reflection", "Generics are erased; reflection sees",

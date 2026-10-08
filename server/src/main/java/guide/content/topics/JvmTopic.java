@@ -68,6 +68,7 @@ public final class JvmTopic {
                                             <groupId>org.springframework.boot</groupId>
                                             <artifactId>spring-boot-maven-plugin</artifactId>
                                         </plugin>
+                                        <!-- … the grpc protobuf codegen plugin (topic 15) follows … -->
                                     </plugins>
                                 </build>""")),
                 section("threads-vs-event-loop", "Threads versus the event loop",

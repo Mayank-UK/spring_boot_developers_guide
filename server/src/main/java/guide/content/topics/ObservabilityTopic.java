@@ -157,10 +157,20 @@ public final class ObservabilityTopic {
                                   });
                                 }, [config, level, limit]);
 
+                                // … the effect that runs loadRing once on mount …
                                 const emit = (nextLevel: string) =>
                                   void safeRepositoryCall(async () =>
                                     parseEvent((await guardedGetJson(config, `/demo/obs/logs/emit?level=${nextLevel}`)).body),
-                                  );"""),
+                                  ).then((result) => {
+                                    if (result.ok) {
+                                      loadRing();
+                                    } else if (result.failure.code === 'validation_failed') {
+                                      // the emitter's own door: an unknown level is a typed 400, kept visible
+                                      setPanel({ kind: 'error', failure: result.failure });
+                                    } else {
+                                      setPanel({ kind: 'error', failure: result.failure });
+                                    }
+                                  });"""),
                         text("sl:viewer-note", """
                                 Note what the ring is NOT: it is not a second logging API. Events flow through the normal Logback pipeline, and the ring is simply another appender attached at the same root, seeing exactly what the JSON console sees. In-memory and bounded, it survives no restart and holds no history — a teaching window onto events a real deployment would ship to a platform. The FORMAT is the durable lesson, not the ring.""")),
                 section("request-logging-filter", "One line per request",

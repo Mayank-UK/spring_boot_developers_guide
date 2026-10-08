@@ -59,7 +59,7 @@ public final class SpringBootFundamentalsTopic {
 
                                 Dependency management, not dependency injection: the BOM puts nothing on your classpath — it fixes versions for what you name. When you must move off the curated version (a critical fix, a regression), you override the BOM's property for that library in your pom's properties block — explicit, visible in review, yours to maintain. The contract: Boot picks defaults so you don't argue about them, and names the one place where disagreeing is allowed."""),
                         code("setup:starters", "xml",
-                                "server/pom.xml — the whole runtime dependency list: capabilities, not versions",
+                                "server/pom.xml — the dependency list opens with the core starters: capabilities, not versions",
                                 "server/pom.xml", """
                                 <dependencies>
                                     <dependency>
@@ -68,14 +68,18 @@ public final class SpringBootFundamentalsTopic {
                                     </dependency>
                                     <dependency>
                                         <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-starter-validation</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.springframework.boot</groupId>
                                         <artifactId>spring-boot-starter-actuator</artifactId>
                                     </dependency>
-                                    <!-- … validation, devtools, and test-only artifacts elided … -->
+                                    <!-- … devtools, the test stack, and the capabilities later topics add — jdbc, jpa, redis, mongo, graphql, grpc, security, websocket, mail, webclient — all versionless … -->
                                 </dependencies>"""),
                         text("setup:pulled", """
                                 So what does a starter actually pull in? Run mvn dependency:tree and read it — the habit answers more "where did this class come from" questions than documentation. spring-boot-starter-web resolves to the webmvc stack (Spring's servlet web framework), the embedded-Tomcat artifacts (a real servlet container as libraries, not an installed server), the JSON stack (Jackson, which serializes every response body in this guide), and the core starter with framework plus default logging. 
 
-                                The rest of our list: validation (Bean Validation annotations on request inputs), actuator (health-and-ops endpoints, later in this topic), devtools — development-only, runtime-scoped and optional so it never ships — and two test artifacts, including spring-boot-webmvc-test (Boot 4 modularization: test slices live in per-technology jars, not one autoconfigure monolith). Notice what is absent: no database starter, no ORM, no caching.""")),
+                                Beyond those three the list grows with the guide: devtools — development-only, runtime-scoped and optional so it never ships — the test stack, including spring-boot-webmvc-test (Boot 4 modularization: test slices live in per-technology jars, not one autoconfigure monolith), and then every capability later topics pull in — jdbc, jpa, redis, mongo, graphql, grpc, security, websocket, mail, webclient — until the dependency list reads as the app's inventory of capabilities, still without a single version of our own. Topic 31 tours that full list end to end.""")),
                 section("application-and-autoconfiguration", "The application class and autoconfiguration",
                         "@SpringBootApplication is three annotations in one, and autoconfiguration is a factory pattern guarded by conditions — here is the machinery, and how to read its report.",
                         code("auto:application", "java",
@@ -341,12 +345,13 @@ public final class SpringBootFundamentalsTopic {
                                             <groupId>org.springframework.boot</groupId>
                                             <artifactId>spring-boot-maven-plugin</artifactId>
                                         </plugin>
+                                        <!-- … the grpc protobuf codegen plugin (topic 15) follows … -->
                                     </plugins>
                                 </build>""")),
                 section("what-it-leaves-out", "What it leaves out",
                         "Boot ships no web page, no database, no ORM by default — opinionated but overridable, and this repo exercises both halves of that contract.",
                         text("left:philosophy", """
-                                The surprising Boot fact, and the mark of its taste: the core adds almost nothing application-shaped. No ORM. No web pages. No database driver, no connection pool, no cache implementation. Our whole runtime list is web, validation, actuator — capability starters for things the app DOES. The philosophy: Boot autoconfigures what you BROUGHT, and what you did not bring, it leaves alone (you saw DataSourceAutoConfiguration politely report "did not match — class not found"). Opinionated but overridable, in both directions: bring a starter and receive the curated wiring; override a bean or property and the framework backs off.
+                                The surprising Boot fact, and the mark of its taste: the core adds almost nothing application-shaped. No ORM. No web pages. No database driver, no connection pool, no cache implementation. Our foundational list is web, validation, actuator — capability starters for things the app DOES — and every later starter (jdbc, jpa, redis, mongo…) arrives only when its topic teaches it. The philosophy: Boot autoconfigures what you BROUGHT, and what you did not bring, it leaves alone (you saw DataSourceAutoConfiguration politely report "did not match — class not found"). Opinionated but overridable, in both directions: bring a starter and receive the curated wiring; override a bean or property and the framework backs off.
 
                                 Why so austere? Because every bundled default becomes a compatibility promise, and defaults rot. The conditional-factory design lets Boot ship integration code for a hundred libraries while ACTIVATING only the ones your classpath names — the report's negative-matches column IS the restraint, made visible. "Explicit deps" is the list of things your app has decided to be."""),
                         text("left:divergence", """
@@ -365,12 +370,14 @@ public final class SpringBootFundamentalsTopic {
 
                                 The second thing served around your API is the actuator. It exposes operational information over HTTP at /actuator/*, and true to the override-everything contract, what it publishes is itself a configuration property. Our application.yml names the web-exposed endpoints — health and info, plus prometheus since topic 33 (observability) tours the exposition — and that file IS the source of truth: the demo in the controller section reads this very property back out of the Environment."""),
                         code("act:yml", "yaml",
-                                "server/src/main/resources/application.yml — the whole running-process configuration, verbatim",
+                                "server/src/main/resources/application.yml — the running process's own keys: name, port, and the actuator's exposure",
                                 "server/src/main/resources/application.yml", """
                                 spring:
                                   application:
                                     name: springboot-developers-guide
 
+                                  # … graphql, grpc, datasource, jpa, data-redis, data-mongodb, security —
+                                  #     the per-topic blocks later chapters append under spring: …
                                 server:
                                   port: 8080
 
@@ -382,7 +389,8 @@ public final class SpringBootFundamentalsTopic {
                                   endpoint:
                                     health:
                                       probes:
-                                        enabled: true"""),
+                                        enabled: true
+                                  # … per-topic blocks below: guide's own keys, a dev-profile document …"""),
                         text("act:health", """
                                 Read the file as the running process's shape: a name, the port Tomcat binds, the management block. /actuator/health answers {"status":"UP"} plus component detail once real dependencies register health indicators — and the probes flag switches on the kubernetes-shaped pair /actuator/health/liveness and /actuator/health/readiness, the difference between "restart me" and "stop routing to me" (topic 33 expands this). /actuator/info answers build metadata when the build provides it. Deliberately NOT exposed: env, beans, mappings — endpoints that leak configuration and internals; the exposure list is the least-privilege decision, and ours is two endpoints long. The /docs mount you might expect from the express guide's sibling project arrives later, with the api-documentation topic.""")),
                 section("dev-workflow", "The dev workflow",
