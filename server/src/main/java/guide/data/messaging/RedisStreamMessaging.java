@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Objects;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Range;
-import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisStreamCommands.XClaimOptions;
 import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;

@@ -1,5 +1,6 @@
 package guide.data.redis;
 
+import guide.core.errors.UnavailableException;
 import java.util.Objects;
 import java.util.function.Supplier;
 import org.springframework.dao.DataAccessException;
@@ -7,7 +8,6 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import guide.core.errors.UnavailableException;
 
 /**
  * The 'redis' area's lazy LIVE ACTIVATION — the optional-service discipline,

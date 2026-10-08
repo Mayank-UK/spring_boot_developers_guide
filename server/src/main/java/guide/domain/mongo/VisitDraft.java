@@ -82,4 +82,3 @@ public record VisitDraft(String topicId, String path, String visitorToken,
                 locale == null || locale.isBlank() ? "en" : locale.strip()));
     }
 }
-

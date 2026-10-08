@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import guide.content.CodeBlock;
 import guide.content.ContentRegistry;
-import guide.content.ContentTopics;
 import guide.content.ContentSection;
+import guide.content.ContentTopics;
 import guide.content.DemoBlock;
 import guide.content.SnippetMatcher;
 import guide.content.Topic;

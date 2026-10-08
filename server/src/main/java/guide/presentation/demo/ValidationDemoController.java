@@ -1,13 +1,13 @@
 package guide.presentation.demo;
 
 import guide.core.errors.AppException;
+import guide.core.logging.RequestIdFilter;
 import guide.core.result.Failed;
 import guide.core.result.Result;
 import guide.core.result.Success;
 import guide.domain.validation.ArenaSubmission;
 import guide.domain.validation.AssessArenaSubmission;
 import guide.domain.validation.ValidationArena;
-import guide.core.logging.RequestIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.MDC;

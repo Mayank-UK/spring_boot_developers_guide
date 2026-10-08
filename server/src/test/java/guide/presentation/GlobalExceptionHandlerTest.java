@@ -10,6 +10,7 @@ import guide.core.errors.FailureKind;
 import guide.core.errors.ValidationException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +41,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/boom")
         String boom() {
             throw new IllegalStateException("boom");
+        }
+
+        @GetMapping("/probe-data-access")
+        String probeDataAccess() {
+            throw new DataAccessResourceFailureException("connection refused");
         }
     }
 
@@ -73,6 +79,16 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error.code").value("internal_error"))
                 .andExpect(jsonPath("$.error.message").value("Internal server error"))
+                .andExpect(jsonPath("$.error.requestId").isNotEmpty());
+    }
+
+    @Test
+    void dataAccessExceptionBecomesTheTyped503UnavailableEnvelope() throws Exception {
+        mockMvc.perform(get("/probe-data-access"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error.code").value(FailureKind.UNAVAILABLE.errorCode()))
+                .andExpect(jsonPath("$.error.message")
+                        .value("A backing store is unreachable — the service is degraded until it returns"))
                 .andExpect(jsonPath("$.error.requestId").isNotEmpty());
     }
 }

@@ -1,5 +1,11 @@
 package guide.data.messaging;
 
+import guide.core.errors.NotFoundException;
+import guide.core.errors.ValidationException;
+import guide.data.sqldemo.DbDemoActivation;
+import guide.domain.messaging.DomainEvent;
+import guide.domain.messaging.PostEventTransaction;
+import guide.domain.messaging.TeachingEventPublisher;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -7,12 +13,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
-import guide.core.errors.NotFoundException;
-import guide.core.errors.ValidationException;
-import guide.data.sqldemo.DbDemoActivation;
-import guide.domain.messaging.DomainEvent;
-import guide.domain.messaging.PostEventTransaction;
-import guide.domain.messaging.TeachingEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -129,4 +129,3 @@ class AuthSessionsDemoTest {
                 .andExpect(status().isUnauthorized());
     }
 }
-

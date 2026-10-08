@@ -1,15 +1,15 @@
 package guide.domain.errors;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import guide.core.logging.RequestIdFilter;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
-import guide.core.logging.RequestIdFilter;
 
 /**
  * The process-level safety net, triggered DIRECTLY (no thread has to die

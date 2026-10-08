@@ -1,11 +1,15 @@
 package guide.presentation.demo;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import guide.domain.security.RateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +43,9 @@ import org.testcontainers.utility.DockerImageName;
  *   proves the positive half;
  * - an unknown area is the typed 400 envelope carrying the DERIVED known
  *   list, and it resets NOTHING (a pending async ticket survives it);
+ * - the rate guard: exhausting the per-client bucket answers the typed 429
+ *   envelope (Retry-After included, the security lab's exact shape), and
+ *   the bucket's reset seam restores success;
  * - the sweep ACTUALLY resets: messaging and jobs are driven into
  *   mutated state through their own demo endpoints first (a dead-lettered
  *   job with its sent mail, a finished async ticket, a committed outbox
@@ -71,15 +78,24 @@ class SharedDemoResetControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private RateLimitService rateLimitService;
+
     /**
      * Every test starts from the clean slate it asserts about —
      * order-independent. The msg area's schema migrates lazily at its
      * FIRST activation, so a cheap read pays that here: otherwise the
      * reset-all report's messaging row would honestly say reset=false
-     * (no outbox table yet) in whichever test runs first.
+     * (no outbox table yet) in whichever test runs first. The FIRST
+     * cleanup is the rate guard's own bucket (the scenarioStore.reset()
+     * idiom): every MockMvc call shares the 127.0.0.1 remote address, so
+     * without forgetting the bucket the suite's own reset posts would
+     * exhaust the burst budget and color later tests with 429s.
      */
     @BeforeEach
     void resetAllAreas() throws Exception {
+        rateLimitService.reset(SharedDemoResetController.RATE_KEY_PREFIX + "127.0.0.1",
+                SharedDemoResetController.RATE_LIMIT, SharedDemoResetController.RATE_WINDOW);
         mockMvc.perform(get("/api/demo/msg/stream/dlq")).andExpect(status().isOk());
         mockMvc.perform(post("/api/demo/reset")).andExpect(status().isOk());
     }
@@ -155,6 +171,36 @@ class SharedDemoResetControllerTest {
         mockMvc.perform(get("/api/demo/jobs/async"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    // ---- the rate guard ---------------------------------------------------------
+
+    @Test
+    void exhaustingTheRateBudgetAnswersThe429EnvelopeAndTheResetSeamRestoresIt() throws Exception {
+        // burst 5, and @BeforeEach's sweep already spent one token: four more pass
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/demo/reset")).andExpect(status().isOk());
+        }
+
+        // the bucket is empty: the refusal is the security lab's exact 429
+        // shape — the typed envelope with the budget's numbers, plus Retry-After
+        mockMvc.perform(post("/api/demo/reset"))
+                .andExpect(status().is(429))
+                .andExpect(header().string("Retry-After", notNullValue()))
+                .andExpect(jsonPath("$.error.code").value("rate_limited"))
+                .andExpect(jsonPath("$.error.message").value(containsString("demo reset")))
+                .andExpect(jsonPath("$.error.limit")
+                        .value((int) SharedDemoResetController.RATE_LIMIT))
+                .andExpect(jsonPath("$.error.windowSeconds")
+                        .value((int) SharedDemoResetController.RATE_WINDOW.toSeconds()))
+                .andExpect(jsonPath("$.error.retryAfterSeconds").value(greaterThan(0)));
+
+        // the reset seam (tests + the rate limiter's own demo) restores the budget
+        rateLimitService.reset(SharedDemoResetController.RATE_KEY_PREFIX + "127.0.0.1",
+                SharedDemoResetController.RATE_LIMIT, SharedDemoResetController.RATE_WINDOW);
+        mockMvc.perform(post("/api/demo/reset"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reset.length()").value(6));
     }
 
     // ---- the proof: mutated state actually returns to the clean slate ------------

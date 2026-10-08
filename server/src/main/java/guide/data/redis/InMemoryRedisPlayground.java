@@ -1,7 +1,7 @@
 package guide.data.redis;
 
-import guide.domain.redis.RedisPlayground;
 import guide.domain.redis.RecentMessages;
+import guide.domain.redis.RedisPlayground;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;

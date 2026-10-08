@@ -341,3 +341,28 @@ spring:
   graphql:
     graphiql:
       enabled: true
+
+# ── Production posture: the prod document ────────────────────────────────────
+# Security hardening, FLAGGED APPEND: activated only when SPRING_PROFILES_ACTIVE
+# is `prod` (the prod compose file sets it). This document carries ONLY the
+# values that must differ from the teaching defaults above — the minimal prod
+# posture, everything else inherits:
+#   tracing sampling 0.1 — the dev/default document ships 1.0 on purpose (the
+#   trace demo needs every run traced), but sampling EVERYTHING in prod is a
+#   cost hazard: tracing-everything is how tracing becomes the thing you turn
+#   off. One trace in ten is the production default the observability topic
+#   already teaches.
+# The SECRET half of prod posture is not yaml at all — it is refusal:
+# guide/config/ProdSanityConfig.java fails the boot when prod runs on the
+# dev-default HS256 key or the dev datasource password, and the prod compose
+# file makes SDG_JWT_SECRET a required variable so the stack will not even
+# render without a real secret. Fail-fast beats fail-weird.
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+management:
+  tracing:
+    sampling:
+      probability: 0.1

@@ -41,19 +41,19 @@ public final class SecurityTopic {
                         "Before the first header and the first rate limit: five minutes of deciding what you are protecting, from whom, and what you will deliberately not defend.",
                         text("sec:threat:triage", """
                                 SECURITY IS RISK MANAGEMENT, not a feature list. Every practice in this topic — headers, CORS, rate limits, allowlists, crypto-shred — is a MITIGATION for a named threat, and a mitigation without its threat is cargo cult. Start every system the same way, five minutes, three lists:
-                                
+
                                 ASSETS — what loss actually hurts? For this guide: teaching content (low value), demo substrates (resettable), the JWT signing secret and API keys (REAL credentials — forgeable identity), any PII a demo stores. VULNERABILITIES — where could assets be reached without authorization? Every input boundary qualifies: request bodies, subscription URLs the server will later FETCH, parameters that reach SQL. THREATS — WHO exploits which vulnerability against which asset? A bored user pasting a UNION into the sql-safety demo; a hostile webhook subscriber aiming our HTTP client at the cloud metadata service; a stolen browser tab replaying cookie-authenticated state changes.
-                                
+
                                 The triage KILLS work as much as it creates it. This app serves teaching JSON on plain HTTP in dev: TLS termination belongs to the reverse proxy (topic 37), so HSTS is configured but honestly absent on HTTP responses — measured, not claimed. And a teaching API's threat model is narrow: availability matters, confidentiality barely does — EXCEPT where topics deliberately create secrets. Hence the protected surfaces here are ISLANDS: precise, named, enforced by the chain, while the guide stays open."""),
                         text("sec:threat:habit", """
                                 Make the triage a HABIT, not a document: before every bean, what does this component TRUST, what does it EXPOSE, and what is the BLAST RADIUS when it fails. You watched the habit work in topic 23's discovery — adding a resource-server key activated spring-grpc's security autoconfigs, and a whole-suite run caught a POSTURE CHANGE nobody decided on.
-                                
+
                                 One habit-rule before the toolbox: DEFENSE IN DEPTH ASSUMES THE LAYER ABOVE ALREADY FAILED. Parameterized queries because input validation has bugs (topic 17 proved the sandbox's UNION escape live); least-privilege database roles because queries have bugs; per-subject encryption keys because deletion has bugs (backups keep rows). Not paranoia — arithmetic over how often software ships with bugs.""")),
                 section("secure-headers-via-spring-security", "Secure headers via Spring Security",
                         "The helmet equivalent: five response headers that blunt browser-side attacks, written by the filter chain you already have — and a second, deliberately relaxed chain to prove each one's absence.",
                         text("sec:headers:why", """
                                 Response headers are instructions to the BROWSER about how to treat a response — and because the browser enforces them, they defend against attacks your server cannot see. Spring Security's HeadersWriterFilter writes a default set into EVERY response crossing a chain, and the DSL makes the policy explicit. This app's block, added to topic 23's baseline:
-                                
+
                                 Read the five directives as five attacks: nosniff stops MIME confusion (a JSON endpoint tricked into executing as script); frameOptions DENY stops clickjacking (your page invisible-inside-an-attacker-page); the Content-Security-Policy is the browser-enforced allowlist — this app serves Swagger UI and a dev GraphiQL from its own origin, so 'self' is the honest lock (a pure JSON API could drop to default-src 'none'); Referrer-Policy trims the Referer to origin-plus-path, keeping tokens-in-URLs at home; HSTS tells the browser this origin is HTTPS-only for a year — and carries this topic's honesty badge: the writer emits it ONLY over secure connections, so the HTTP dev responses (including the live demo below) show it configured-but-absent, exactly as a browser on HTTP would experience."""),
                         code("sec:headers:block", "java",
                                 "guide/config/SecurityConfig.java — the headers block on the main chain (topic 25's flagged extension of the baseline)",
@@ -93,7 +93,7 @@ public final class SecurityTopic {
                         "Cross-origin sharing is a BROWSER policy the SERVER configures — one explicit allowlist, answered by the chain before any controller, and the reasons '*' with credentials is forbidden by the spec itself.",
                         text("sec:cors:model", """
                                 The model first, because every misconfigured CORS story starts with a wrong one: the SERVER does not enforce CORS — the BROWSER does, and the server merely STATES its permission via response headers. A page at https://evil.example can SEND a cross-origin fetch to your API all day; CORS decides whether the page gets to READ the answer. For "simple" requests the browser adds Origin and enforces the response's Access-Control-Allow-Origin; for anything with custom headers or non-simple methods it sends a PREFLIGHT — an OPTIONS request carrying Access-Control-Request-Method — and refuses the real request unless the preflight's answer allows it. Preflights are answered by the chain's CorsFilter BEFORE any controller: your handler never sees them.
-                                
+
                                 Spring Security consults a CorsConfigurationSource when you wire .cors(...). This app's policy is an explicit allowlist — the demo partner origin, this app's own client surfaces (dev server and the prod proxy origin — browsers attach Origin to POSTs even through a same-host proxy, and a policy that omits your own UI 403s it), two methods, no credentials:"""),
                         code("sec:cors:source", "java",
                                 "guide/config/SecurityDemoConfig.java — the explicit policy: named origins (the demo partner PLUS the app's own client surfaces), GET/POST, no credentials",
@@ -110,7 +110,7 @@ public final class SecurityTopic {
                                 return source;"""),
                         text("sec:cors:star", """
                                 WHEN IS '*' ACCEPTABLE? For a PUBLIC, CREDENTIALS-LESS API — anonymous read-only data — a wildcard origin is defensible: no cookies ride the request, so '*' only says "anyone may read what is already public." The moment credentials enter, '*' is not risky but ILLEGAL BY SPEC: the CORS spec forbids Access-Control-Allow-Origin: * together with Access-Control-Allow-Credentials: true, and browsers enforce the ban — echoing "any origin may send my cookies" would resurrect CSRF with extra steps. setAllowedOriginPatterns("*") + allowCredentials(true) is the misconfiguration that occasionally ships. The honest table: public anonymous API → '*' fine; anything authenticated → explicit allowlist (this policy); cookie-carrying SPA → EXACT origin, never a pattern.
-                                
+
                                 The preflight demo asserts the verdicts the CONFIG actually answers — the integration test the chain runs in CI, not a mock:"""),
                         code("sec:cors:test", "java",
                                 "server/src/test/java/guide/presentation/demo/security/SecurityLabDemoTest.java — the preflight verdicts, measured through the real filter chain",
@@ -204,11 +204,11 @@ public final class SecurityTopic {
                                 </pre>"""),
                         text("sec:inj:xss-html", """
                                 XSS returns the moment an SPA reaches for raw HTML: dangerouslySetInnerHTML (React) or innerHTML (vanilla) renders markup AS markup — the escape that protected you is what you disabled. Render TEXT by default; for the rare genuine-HTML case, sanitize with a parsing allowlist (DOMPurify is the standard) BEFORE the raw assignment — never regex, never "we trust this field" (a field's trustworthiness is one upstream bug from revoked). Template engines have the same seam: they auto-escape interpolation and offer raw opt-outs; count yours like your @SuppressWarnings.
-                                
+
                                 COMMAND INJECTION is the sibling with root consequences: never Runtime.exec / ProcessBuilder on input-shaped strings. Arguments travel as separate argv elements (never a shell string), the command itself is a constant you own. This codebase has zero Runtime.exec — the honest number for a web app; when you truly need a process, the discipline is the webhooks guard's: fixed program, enumerated arguments, nothing user-shaped in the command position."""),
                         text("sec:inj:deser", """
                                 DESERIALIZATION is injection into object construction: polymorphic Jackson (enableDefaultTyping / an open @JsonTypeInfo id) or raw ObjectInputStream lets the PAYLOAD name the class to instantiate — gadget chains become remote code execution. The rules, all followed here: bind request bodies to records with CLOSED typing; @JsonTypeInfo only with explicitly enumerated subtypes (a sealed hierarchy, like this app's content blocks, is the natural fit); never Java serialization on the wire. Jackson 3 (Boot 4's tools.jackson.*) changed none of this — the dangerous API is still the type id you did not enumerate.
-                                
+
                                 ReDoS in one paragraph: nested quantifiers like (a+)+ take exponential time on adversarial input, wedging threads — fix with a safer pattern or a length cap BEFORE matching (this app's validation layer shapes every field first). The family pattern, one sentence: every member is DATA crossing into a context that will INTERPRET it — SQL, HTML, shell, the type system, the regex engine — and the fix is always the same boundary: parameterize, escape, or enumerate.""")),
                 section("csrf-ssrf-and-friends", "CSRF, SSRF and friends",
                         "Why our API routes disable CSRF (and when you must not), and the webhooks simulator's outbound fetch turned into the SSRF specimen — an allowlist guard, implemented and tested.",
@@ -223,7 +223,7 @@ public final class SecurityTopic {
                                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/graphql/**"))"""),
                         text("sec:csrf:matrix", """
                                 WHEN YOU MUST ENABLE IT: the moment authentication rides a COOKIE the browser attaches automatically — session logins, "remember me", SSO domains. Then every state-changing route needs a CSRF token (Spring Security's synchronizer-token pattern: server issues, form/body echoes, CsrfFilter compares), with SameSite cookies as the modern dampener — this app's session cookie ships http-only + SameSite=Lax (topic 23's yaml), blocking cross-site POST attachment while keeping normal navigation. The matrix: token-auth API → CSRF off is CORRECT (this app); cookie-session app → CSRF on + SameSite + Secure in prod; mixed app (this one) → per-island decisions stated in the chain. The session demo's POST /login stays exempt BY DESIGN — it accepts credentials, it does not consume them; the duty begins at the routes the session then authenticates.
-                                
+
                                 SSRF is the family's server-side sibling: the SERVER tricked into making a request the ATTACKER chose. The specimen lives in this app's own webhooks simulator — a subscriber registers a URL the delivery engine will later POST to. Without a guard, "http://169.254.169.254/latest/meta-data/iam/…" is not a webhook destination; it is a request for the CLOUD'S OWN CREDENTIALS, sent from this machine's network position. The fix: judge every outbound destination at REGISTRATION time, default-deny:"""),
                         code("sec:ssrf:guard", "java",
                                 "guide/domain/webhooks/SubscribeWebhook.java — the sanctioned guard, minimal: the verdict call sits after the scheme check, before the store",
@@ -267,7 +267,7 @@ public final class SecurityTopic {
                                         secret-key: ${SDG_JWT_SECRET:dev-only-sdg-jwt-hs256-secret-3b9d6f01c2a8e45d7f0b}"""),
                         text("sec:secrets:ladder", """
                                 The LADDER, most to least preferred: (1) SECRET STORE — Vault, AWS/GCP secret managers, k8s Secrets; access auditable, rotation an operation not a release. (2) ENVIRONMENT at deploy time — what this app's compose files do (below); the secret lives outside image and repo. (3) UNCOMMITTED FILE — .env for local dev, git-ignored by a rule that exists IN the repo. (4) MARKED DEV DEFAULTS — acceptable only because a dev default grants nothing an attacker lacks. What NEVER appears: production literals in yaml, secrets in the repo, secrets baked into IMAGE LAYERS (they leak forever), secrets in LOGS (this app logs field NAMES, never values) or stack traces. The test question: "if this repo leaked tomorrow, what would need rotating?" — here, nothing.
-                                
+
                                 ROTATION is the promise the pattern implies: the OLD value stops working while the NEW one starts, without downtime. For HS256 that means dual-key overlap — accept either signature during the window, issue only the new (nimbus via a JWK Set with kid rotation); for API keys (topic 23) the store keeps old-hash validity until expiry; for the PII vault below, rotation and ERASURE are the same machinery. A secret you cannot rotate is a liability, not a control."""),
                         code("sec:secrets:compose", "yaml",
                                 ".docker/docker-compose.prod.yml — the deploy-time move: the image stays clean, the environment hands the process its values",
@@ -284,9 +284,9 @@ public final class SecurityTopic {
                         "The ten API risks, each answered with the real code that defends it — and the honest gaps flagged, because a security map that admits nothing is marketing.",
                         text("sec:owasp:map", """
                                 The OWASP API Security Top 10 is the checklist shape this topic's lessons snap into — mapped to THIS app, risk by risk:
-                                
+
                                 API1 BROKEN OBJECT LEVEL AUTHORIZATION — every object access must check the CALLER's right to THAT object: topic 24's authorization island. GAP, honestly: most demo routes here are deliberately permissive (the teaching inversion) — the ISLAND is the example, not the whole app.
-                                
+
                                 API2 BROKEN AUTHENTICATION — topic 23's six flows, all real Spring Security. The deliberate gRPC posture belongs here: topic 15's teaching surface authenticates NOTHING, and after topic 23's blanket exclusion was replaced by THIS topic's decision, the verdict is stated, stamped on the wire, and ENFORCED — presented credentials are refused, never silently ignored:"""),
                         code("sec:owasp:grpc", "java",
                                 "guide/domain/security/GrpcPostureInterceptor.java — the deliberate gRPC posture as code: permit-all stamped, credential-bearing calls refused loudly",
@@ -307,9 +307,9 @@ public final class SecurityTopic {
                                 }, headers);"""),
                         text("sec:owasp:rest", """
                                 The interceptor is registered globally via spring-grpc's @GlobalServerInterceptor, and the yaml exclusion that preceded it was NARROWED to the one autoconfig that would silently inherit the MVC JWT secret — the authenticated option (authorizeRequests(anyRequest().authenticated()) + oauth2ResourceServer(jwt) on the autoconfigured GrpcSecurity builder, BearerTokenAuthenticationInterceptor on the client channel) is now a configuration change away.
-                                
+
                                 API3 PROPERTY-LEVEL AUTHORIZATION — closed record DTOs, plaintext never leaves the PII vault (next section). API4 UNRESTRICTED RESOURCE CONSUMPTION — rate limiting (this topic), bounded streaming, HikariCP's pool ceiling. API5 FUNCTION-LEVEL AUTHORIZATION — topic 24's URL rules + method security; GAP: @PreAuthorize covers the authz island only. API6 SENSITIVE BUSINESS FLOWS — key issuance and token exchange prove themselves with credentials IN the request; the rate limiter blunts brute force.
-                                
+
                                 API7 SSRF — the UrlAllowlist, implemented and tested. API8 SECURITY MISCONFIGURATION — the helmet headers, the deliberately insecure comparison chain (the misconfiguration demo is literally a chain this topic ships), no default accounts, the narrowed yaml exclusion. API9 INVENTORY MANAGEMENT — /v3/api-docs drift-tested (topic 12), versioned content API, dev-only surfaces (GraphiQL) profile-gated. API10 UNSAFE CONSUMPTION — the outbound side: the webhooks client treats response codes as DATA, timeouts are set not inherited, the allowlist judges what the server consumes. The honest GAP list, so this stays a map and not a brochure: no TLS in dev (the proxy's job in prod), in-memory-only rate limiting, demo routes deliberately open (the teaching inversion), hostname-based SSRF without DNS pinning."""),
                         code("sec:owasp:client", "ts",
                                 "client/src/ui/demos/security/lab_demo.tsx — the client half of the 429 contract: the refused branch renders the failure as EVIDENCE (Retry-After travels in the message), not a crash",
@@ -323,7 +323,7 @@ public final class SecurityTopic {
                         "Right to be forgotten, implemented as crypto-shred: per-subject AES-GCM keys, erasure that deletes THE KEY while rows survive as noise, and an append-only log that proves it happened.",
                         text("sec:pii:why", """
                                 GDPR's erasure right says: on request, a subject's personal data must become GONE — not hidden, not anonymized-in-place, gone. The naive implementation, DELETE FROM users WHERE id = …, fails the moment you inventory where data actually lives: the primary row dies, but the replica lags, last night's backup keeps everything, the analytics export is on someone's laptop, and the debug LOG has the email in it. You cannot enumerate what you cannot see. THE CRYPTO-SHRED ANSWER: encrypt each subject's data under a key belonging to THAT SUBJECT ALONE, and implement erasure as DESTROYING THE KEY — ciphertext survives everywhere as noise nobody can read, and deletion you cannot perform everywhere becomes deletion you performed ONCE.
-                                
+
                                 The vault in this app, three ports and a cipher: KeyVault (where keys live and die), PiiVault (the deliberately dumb ciphertext store), ErasureLog (the append-only witness). The key home is the load-bearing wall:"""),
                         code("sec:pii:keyvault", "java",
                                 "guide/domain/security/KeyVault.java — the port whose DESTROY method is the entire right-to-be-forgotten implementation",
@@ -370,7 +370,7 @@ public final class SecurityTopic {
                                 null, """
                                 curl -sI http://localhost:8080/api/demo/security/lab/probe | grep -Ei 'x-content-type|x-frame|content-security|referrer|strict-tr'
                                 curl -sI http://localhost:8080/api/demo/security/lab/insecure/probe | grep -Ei 'x-content-type|x-frame|content-security|referrer|strict-tr' || echo '(nothing — the relaxed chain writes none of them)'
-                                
+
                                 # the annotated lab, both chains fetched live by the server itself:
                                 curl -s http://localhost:8080/api/demo/security/lab/headers | head -c 1200; echo"""),
                         text("sec:terminal:cors", """
@@ -381,7 +381,7 @@ public final class SecurityTopic {
                                 curl -si -X OPTIONS http://localhost:8080/api/demo/security/lab/cors/target \\
                                   -H 'Origin: https://partner.demo.sdg.dev' \\
                                   -H 'Access-Control-Request-Method: POST' | grep -Ei 'HTTP/|access-control'
-                                
+
                                 curl -si -X OPTIONS http://localhost:8080/api/demo/security/lab/cors/target \\
                                   -H 'Origin: https://evil.example' \\
                                   -H 'Access-Control-Request-Method: POST' | head -1"""),
@@ -393,7 +393,7 @@ public final class SecurityTopic {
                                 curl -s -X POST 'http://localhost:8080/api/demo/security/lab/ratelimited?key=tour&limit=2&window=3600'
                                 curl -s -X POST 'http://localhost:8080/api/demo/security/lab/ratelimited?key=tour&limit=2&window=3600'
                                 curl -si -X POST 'http://localhost:8080/api/demo/security/lab/ratelimited?key=tour&limit=2&window=3600' | grep -Ei 'HTTP/|retry-after|rate_limited'
-                                
+
                                 # the seam the tests use — the bucket starts full again:
                                 curl -s -X POST 'http://localhost:8080/api/demo/security/lab/ratelimited/reset?key=tour&limit=2&window=3600'"""),
                         text("sec:terminal:pii", """
@@ -404,14 +404,14 @@ public final class SecurityTopic {
                                 curl -s -X POST http://localhost:8080/api/demo/security/pii/store \\
                                   -H 'Content-Type: application/json' \\
                                   -d '{\"subject\":\"usr_tour\",\"fields\":{\"name\":\"Ada\",\"email\":\"ada@example.com\"}}' | head -c 400; echo
-                                
+
                                 curl -s http://localhost:8080/api/demo/security/pii/read/usr_tour; echo
-                                
+
                                 curl -s -X POST http://localhost:8080/api/demo/security/pii/erase/usr_tour; echo
-                                
+
                                 # the same read after erasure — typed, honest about what survived:
                                 curl -s http://localhost:8080/api/demo/security/pii/read/usr_tour; echo
-                                
+
                                 curl -s http://localhost:8080/api/demo/security/pii/log | head -c 600; echo"""),
                         text("sec:terminal:close", """
                                 What the tour proved, in order: the chain writes the headers it claims (and the relaxed chain writes none); the CORS policy answers preflights with echo-or-refuse; the rate limiter honors its 429+Retry-After contract and its reset seam; and the vault's erasure is real — same route, different world. That is the topic's whole method: every defense on this page is a MEASURED behavior of this running app. Security that only exists in a config review is a belief; security you can curl is a control.""")));

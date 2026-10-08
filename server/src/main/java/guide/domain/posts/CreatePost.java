@@ -3,7 +3,6 @@ package guide.domain.posts;
 import guide.core.errors.Failure;
 import guide.core.errors.FailureKind;
 import guide.core.result.Result;
-import java.util.Objects;
 
 /**
  * Use case: create a post from a draft. The draft has already been judged at

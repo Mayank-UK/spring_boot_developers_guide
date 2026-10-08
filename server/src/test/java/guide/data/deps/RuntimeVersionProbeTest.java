@@ -3,7 +3,6 @@ package guide.data.deps;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import guide.domain.deps.CuratedArtifacts;
 import guide.domain.deps.ReadManifest;
 import guide.domain.deps.VersionProbe;
 import java.util.List;

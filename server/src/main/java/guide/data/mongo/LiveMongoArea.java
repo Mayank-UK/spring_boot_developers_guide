@@ -1,12 +1,12 @@
 package guide.data.mongo;
 
 import guide.core.errors.AppException;
-import guide.core.scenario.ScenarioDataMode;
-import guide.core.scenario.ScenarioStore;
-import guide.domain.mongo.VisitStore;
 import guide.core.result.Failed;
 import guide.core.result.Result;
 import guide.core.result.Success;
+import guide.core.scenario.ScenarioDataMode;
+import guide.core.scenario.ScenarioStore;
+import guide.domain.mongo.VisitStore;
 import java.util.Objects;
 
 /**

@@ -1,7 +1,7 @@
 package guide.data.debug;
 
-import guide.domain.debug.StallThreadView;
 import guide.domain.debug.StallTheater;
+import guide.domain.debug.StallThreadView;
 import guide.domain.debug.ThreadDiagnostics;
 import java.util.Arrays;
 import java.util.List;

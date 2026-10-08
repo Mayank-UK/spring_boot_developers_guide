@@ -1,6 +1,8 @@
 package guide.data.posts;
 
 import guide.core.errors.AppException;
+import guide.core.result.Failed;
+import guide.core.result.Result;
 import guide.core.scenario.ScenarioDataMode;
 import guide.core.scenario.ScenarioStore;
 import guide.data.sql.SchemaMigrator;
@@ -10,8 +12,6 @@ import guide.domain.posts.PostDraft;
 import guide.domain.posts.PostFilter;
 import guide.domain.posts.PostRepository;
 import guide.domain.posts.PostSort;
-import guide.core.result.Failed;
-import guide.core.result.Result;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;

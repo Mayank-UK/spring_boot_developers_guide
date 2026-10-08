@@ -1,6 +1,5 @@
 package guide.data.redis;
 
-import guide.data.redis.RedisNamespace;
 import guide.domain.redis.RecentMessages;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;

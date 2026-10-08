@@ -7,7 +7,6 @@ import guide.domain.posts.PostFilter;
 import guide.domain.posts.PostRepository;
 import guide.domain.posts.PostSort;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.ZoneOffset;

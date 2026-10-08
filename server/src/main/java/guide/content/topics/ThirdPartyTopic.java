@@ -52,9 +52,9 @@ public final class ThirdPartyTopic {
                         "Build vs buy is rarely about capability — it is about what you accept depending on. The third-party decision is a containment decision, and the rest of the topic is the machinery of containment.",
                         text("ivb:decision", """
                                 EVERY BACKEND OF ANY AGE is a composite of other people's services: a mail relay, a payments processor, an object store, a SMS gateway, a maps API, a search vendor. The INTEGRATING VS BUILDING question is not "could we build this?" — with enough time you could build anything — it is "what does this dependency cost us in the dimensions we care about?" LATENCY: every call is a network round trip inside your request path unless you work to keep it out. FLAKINESS: providers have incidents, greylist, throttle, and change behavior under you, on their schedule. SECRETS: a provider means credentials whose leak radius you must engineer against. QUOTAS: providers meter you, and the meter is a failure mode your users feel. And BLAST RADIUS: when the dependency degrades, how much of YOUR product degrades with it? A checkout that fails because the receipt-mail relay is down has answered that question badly.
-                                
+
                                 The guide's position, built from every layer before this topic: INTEGRATE OFTEN, but contain ALWAYS. You should not write your own SMTP stack, your own PCI-compliant payment rails, or your own distributed object store — those are commodities where the provider's whole business is being better at it than you. But the CONTAINMENT is yours to lose, and it is cheap when done at the right place: the port. Every integration in this topic — mail, payments, storage — runs behind a small interface in the domain, with the provider machinery quarantined in the data layer, wired by the config. That is the same dependency rule topic 32 enforced mechanically (presentation → domain ← data), applied to the outside world: the domain says WHAT ("send this mail", "charge this token"), an adapter says HOW (SMTP, Stripe's REST API, S3's PUT), and nothing above the port can tell which adapter answered.
-                                
+
                                 One vocabulary decision up front, because the demo depends on it: POSTURE. Every adapter in this topic answers in one of three postures —
                                 """),
                         code("ivb:posture", "java",
@@ -67,7 +67,7 @@ public final class ThirdPartyTopic {
                                     LIVE("live");"""),
                         text("ivb:contract", """
                                 FAKE is an adapter the repo owns: in-process, deterministic, no network, no credential — what every demo and every test in this guide runs. SANDBOX is the provider's TEST WORLD: real-shaped semantics (documented test tokens, relay greylisting, provider size ceilings) with the same zero-network guarantee — the posture you graduate to before live, and the one that makes CI meaningful: the code paths a checkout exercises against the sandbox are the same ones production runs. LIVE is the real provider, real key, real consequences — and the one rule about live that this topic will repeat: LIVE IS A KEY-AND-WIRING DECISION MADE AT DEPLOY TIME, never a runtime dial. That is why the shared port contract below returns whether a posture change happened: fakes flip, real adapters refuse.
-                                
+
                                 The contract every integration port carries, beside its operations:
                                 """),
                         code("ivb:ports", "java",

@@ -1,14 +1,14 @@
 package guide.domain.caching;
 
 import guide.core.errors.AppException;
+import guide.core.result.Failed;
+import guide.core.result.Result;
+import guide.core.result.Success;
 import guide.domain.posts.ListPosts;
 import guide.domain.posts.PagedPosts;
 import guide.domain.posts.Post;
 import guide.domain.posts.PostFilter;
 import guide.domain.posts.PostSort;
-import guide.core.result.Failed;
-import guide.core.result.Result;
-import guide.core.result.Success;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

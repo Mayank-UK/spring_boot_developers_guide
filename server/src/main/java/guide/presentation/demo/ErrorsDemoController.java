@@ -1,7 +1,6 @@
 package guide.presentation.demo;
 
 import guide.core.errors.AppException;
-import guide.core.errors.Failure;
 import guide.core.errors.FailureKind;
 import guide.core.errors.ValidationException;
 import guide.core.result.Failed;

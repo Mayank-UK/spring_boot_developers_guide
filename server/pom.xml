@@ -689,6 +689,94 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Build-tooling hardening: Spotless — the Java hygiene layer,
+                 pinned explicitly (the Boot parent manages no version for it).
+                 Deliberately CONSERVATIVE: no formatter engine (google-java-
+                 format/palantir would rewrite the quoted teaching spans the
+                 content registry verifies) and no non-Java targets — yaml/pom
+                 snippets are quoted verbatim by topics and stay untouched.
+                 Four surgical rules only: removeUnusedImports, importOrder
+                 (\# = static imports first, then everything else alphabetical
+                 — the convention this tree already follows), trailing-
+                 whitespace trim, final newline. Scope is the HAND-WRITTEN
+                 tree (src/main + src/test) — generated protobuf sources under
+                 target/ are excluded so regeneration never fights the
+                 formatter. The check goal rides its default verify phase
+                 (the same gate discipline JaCoCo uses), so plain mvn test
+                 stays fast while mvn verify polices formatting. -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>3.10.3</version>
+                <configuration>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                        <removeUnusedImports/>
+                        <importOrder>
+                            <order>\#,</order>
+                        </importOrder>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Build-tooling hardening: Error Prone — the static analyzer,
+                 wired as an ANNOTATION PROCESSOR on javac (the errorprone.info
+                 Maven wiring: annotationProcessorPaths keeps it off the app's
+                 runtime graph entirely — it is invisible to dependency:tree
+                 and to the enforcer, which is also why its 2.50.0 version is
+                 deliberately NOT aligned with the error_prone_annotations
+                 2.41.0 pin in dependencyManagement: that pin is the RUNTIME
+                 graph's enforcer-honest upper bound (the story topic 31 and
+                 the deps snapshot teach), while error_prone_core here is a
+                 build-only tool that never meets it on a classpath). POLICY
+                 this pass: default WARNING severity — findings surface in
+                 build logs, nothing is promoted to ERROR, the build stays
+                 green. The -XDcompilePolicy=simple / should-stop=ifError=
+                 FLOW / -XDaddTypeAnnotationsToSymbol trio is what the docs
+                 require for modern javac (JDK 21+); the JDK-16+ strong-
+                 encapsulation add-exports/add-opens flags javac needs
+                 live in .mvn/jvm.config (in-process compiler), per the same
+                 installation section. Version 2.50.0: the error_prone_core
+                 line's latest on Central, JDK-25-capable. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-XDcompilePolicy=simple</arg>
+                        <arg>--should-stop=ifError=FLOW</arg>
+                        <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+                        <!-- Policy demotions ride INSIDE the -Xplugin token
+                             (javac rejects a bare -Xep: flag): SelfAssignment is
+                             ERROR-severity out of the box, and 2.50.0 counts
+                             "x = Objects.requireNonNull(x, msg)" (PostDraft's
+                             record compact constructor) as a redundant self-
+                             assignment — true, harmless, and not worth touching
+                             quoted domain code for. WARNING keeps the finding in
+                             the log while the build stays green. -->
+                        <arg>-Xplugin:ErrorProne -Xep:SelfAssignment:WARN</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>2.50.0</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

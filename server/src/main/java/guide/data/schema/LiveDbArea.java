@@ -1,12 +1,12 @@
 package guide.data.schema;
 
 import guide.core.errors.AppException;
+import guide.core.result.Failed;
+import guide.core.result.Result;
 import guide.core.scenario.ScenarioDataMode;
 import guide.core.scenario.ScenarioStore;
 import guide.data.sql.SchemaMigrator;
 import guide.domain.schema.SchemaCatalog;
-import guide.core.result.Failed;
-import guide.core.result.Result;
 import java.util.Objects;
 import java.util.function.Supplier;
 

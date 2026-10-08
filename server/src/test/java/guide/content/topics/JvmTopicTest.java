@@ -3,11 +3,11 @@ package guide.content.topics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import guide.content.CodeBlock;
 import guide.content.ContentBlock;
 import guide.content.ContentRegistry;
 import guide.content.ContentSection;
 import guide.content.ContentTopics;
-import guide.content.CodeBlock;
 import guide.content.DemoBlock;
 import guide.content.Topic;
 import guide.content.TopicGroupId;

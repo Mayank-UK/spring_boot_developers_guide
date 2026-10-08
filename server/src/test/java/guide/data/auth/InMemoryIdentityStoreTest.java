@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import guide.domain.auth.ApiKeyRecord;
-import guide.domain.auth.IdentityStore;
 import guide.domain.auth.OpaqueTokens;
 import guide.domain.auth.UserPrincipal;
 import java.time.Instant;

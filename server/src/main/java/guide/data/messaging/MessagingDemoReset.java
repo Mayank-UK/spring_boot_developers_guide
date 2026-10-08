@@ -8,8 +8,8 @@ import guide.domain.reset.ResettableDemo;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * ResettableDemo adapter for the messaging demos (topic 22) — the ONE area

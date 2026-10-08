@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import guide.core.result.Result;
 import guide.core.result.Success;
 import guide.core.scenario.ScenarioStore;
 import guide.data.comments.InMemoryCommentRepository;
@@ -14,8 +13,8 @@ import guide.data.posts.InMemoryPostRepository;
 import guide.domain.comments.CommentRepository;
 import guide.domain.posts.ListPosts;
 import guide.domain.posts.Post;
-import guide.domain.posts.PostSort;
 import guide.domain.posts.PostFilter;
+import guide.domain.posts.PostSort;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

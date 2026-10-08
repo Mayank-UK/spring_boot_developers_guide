@@ -16,6 +16,16 @@ services:
     ports:
       - 8080:8080
     environment:
+      # Security hardening: prod runs the PROD profile (dev names `dev`; the
+      # default profile stays the plain teaching posture). The prod document
+      # in application.yml carries what must differ (trace sampling), and
+      # ProdSanityConfig refuses to boot prod on dev-grade secrets.
+      - SPRING_PROFILES_ACTIVE=prod
+      # Compose-level fail-fast: the required-variable syntax makes an absent
+      # SDG_JWT_SECRET a deploy-time error — `docker compose ... up` refuses
+      # to render the stack at all, before any container starts. The image
+      # stays clean; the secret arrives from the deployer's environment.
+      - SDG_JWT_SECRET=${SDG_JWT_SECRET:?SDG_JWT_SECRET must be set to a real 32+ byte secret}
       # Phase 6 (data foundation): the datasource, by service name inside the
       # compose network (mirrors the dev stack's server env exactly).
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide

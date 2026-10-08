@@ -1,9 +1,9 @@
 package guide.data.messaging;
 
+import guide.domain.messaging.EventStream;
 import guide.domain.messaging.OutboxRelay;
 import guide.domain.messaging.OutboxStore;
 import guide.domain.messaging.OutboxStore.OutboxEntry;
-import guide.domain.messaging.EventStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

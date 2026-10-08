@@ -3,7 +3,6 @@ package guide.domain.http;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import guide.core.errors.FailureKind;
 import guide.core.result.Failed;

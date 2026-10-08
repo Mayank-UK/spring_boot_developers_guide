@@ -3,8 +3,6 @@ package guide.domain.reqres;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-import org.junit.jupiter.api.Test;
 import guide.domain.reqres.RequestSurfaceExhibit.AttributeView;
 import guide.domain.reqres.RequestSurfaceExhibit.BoundBody;
 import guide.domain.reqres.RequestSurfaceExhibit.Incoming;
@@ -14,6 +12,8 @@ import guide.domain.reqres.RequestSurfaceExhibit.IncomingHeader;
 import guide.domain.reqres.RequestSurfaceExhibit.IncomingParam;
 import guide.domain.reqres.RequestSurfaceExhibit.RawSurface;
 import guide.domain.reqres.RequestSurfaceExhibit.Report;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 /**
  * RequestSurfaceExhibit unit tests: the classification stamps every bound

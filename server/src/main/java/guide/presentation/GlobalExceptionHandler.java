@@ -16,6 +16,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -198,6 +199,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(statusCode)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(problem);
+    }
+
+    /**
+     * A Spring DataAccessException that reached the edge UNclassified — the
+     * signature of a backing store that is down under a live-routed
+     * scenario. The optional-service adapters translate the family at their
+     * own port's edge (the caching router's guarded() is the pattern); this
+     * branch is the net for the paths without such a router — a JdbcTemplate
+     * call against an absent PostgreSQL, for instance — so the degrade-
+     * gracefully rule holds end-to-end: a typed 503 service_unavailable
+     * envelope, never the generic 500 the catch-all below would render.
+     */
+    @ExceptionHandler(DataAccessException.class)
+    ResponseEntity<ErrorResponse> handleDataAccess(DataAccessException exception,
+            HttpServletRequest request) {
+        String requestId = requestId(request);
+        log.error("request failed: kind={} status={} requestId={}",
+                FailureKind.UNAVAILABLE, FailureKind.UNAVAILABLE.httpStatus(), requestId, exception);
+        return ResponseEntity.status(FailureKind.UNAVAILABLE.httpStatus())
+                .body(ErrorResponse.of(FailureKind.UNAVAILABLE.errorCode(),
+                        "A backing store is unreachable — the service is degraded until it returns",
+                        requestId, null));
     }
 
     /** The safety net: unknown faults get the same envelope, generic message, full log. */
