@@ -24,7 +24,7 @@
              drift apart (protoc and protobuf-java must match; the grpc-java
              codegen binary must match grpc-java at runtime). -->
         <protobuf-java.version>4.33.4</protobuf-java.version>
-        <grpc.version>1.77.1</grpc.version>
+        <grpc.version>1.84.0</grpc.version>
         <spring-grpc.version>1.0.3</spring-grpc.version>
     </properties>
 
