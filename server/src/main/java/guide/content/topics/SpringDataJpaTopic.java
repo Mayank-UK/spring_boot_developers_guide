@@ -237,7 +237,7 @@ public final class SpringDataJpaTopic {
 
                                 That is the real lesson: the fix is a DATA-SHAPE decision, not an annotation hunt. Every row, every read — fetch the association in the page query. Sometimes, or a clump at a time — batch it. Rarely — lazy is correct and the consumer must be deliberate about paying. The probe exists because this decision deserves a number, and the number deserves an instrument:"""),
                         code("n1:counter", "java",
-                                "guide/data/jpa/JpaQueryCounter.java — StatementInspector + ThreadLocal: the honest instrument",
+                                "guide/data/jpa/JpaQueryCounter.java — StatementInspector + ThreadLocal: the honest instrument, its bracket closed by remove()",
                                 "server/src/main/java/guide/data/jpa/JpaQueryCounter.java", """
                                 public final class JpaQueryCounter implements StatementInspector {
 
@@ -248,10 +248,15 @@ public final class SpringDataJpaTopic {
                                         issued.set(issued.get() + 1);
                                         return sql;
                                     }
-                                    // …
+                                    // … reset() zeroes for this thread, issued() reports — and the bracket ENDS:
+
+                                    /** Drop this thread's count — a pooled thread outlives the request that set it. */
+                                    public void remove() {
+                                        issued.remove();
+                                    }
                                 }"""),
                         text("n1:instrument-honesty", """
-                                Counting honestly has rules, and the probe states them in code. StatementInspector sees every statement the SESSION prepares, so the counter is thread-local — a demo claiming "this page cost N queries" must not count another request's statements. The reset happens right after seeding and clearing, so INSERTs and the flush never pollute the measurement; only the read phase counts. And the specimens live inside a transaction marked rollback-only, so the measurement leaves no rows behind — reproducible because the world it measured vanished cleanly. A performance claim you cannot reproduce this way is an anecdote."""),
+                                Counting honestly has rules, and the probe states them in code. StatementInspector sees every statement the SESSION prepares, so the counter is thread-local — a demo claiming "this page cost N queries" must not count another request's statements. reset() opens the window after seeding and clearing; issued() closes it — and remove() in a finally drops the thread's value, because a pooled thread outlives the request. The specimens live in a rollback-only transaction, leaving no rows behind — reproducible because the measured world vanished cleanly. A performance claim you cannot reproduce this way is an anecdote."""),
                         text("n1:client", """
                                 The client console renders exactly the server's record — one typed shape from the adapter's report to the React table, no recomputation. The queries headline is the lesson; wall time is deliberately decoration, because nanoseconds on a shared demo container measure the machine, while the QUERY COUNT measures the code:"""),
                         code("n1:client-code", "ts",

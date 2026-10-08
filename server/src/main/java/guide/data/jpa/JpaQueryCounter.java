@@ -13,7 +13,8 @@ import org.hibernate.resource.jdbc.spi.StatementInspector;
  * Thread-local ON PURPOSE: request threads are single-writer here, and a
  * demo that says "this page cost N queries" must not count another
  * request's statements. reset() then issued() brackets exactly the window
- * the report claims.
+ * the report claims, and remove() drops the value when the window closes —
+ * a pooled thread must not carry one request's count into its next job.
  */
 public final class JpaQueryCounter implements StatementInspector {
 
@@ -33,5 +34,14 @@ public final class JpaQueryCounter implements StatementInspector {
     /** Statements issued on this thread since the last reset. */
     public int issued() {
         return issued.get();
+    }
+
+    /**
+     * Drop this thread's count entirely — the honest end of the bracket. A zero
+     * (reset) reuses the entry; remove() releases it, so a pooled thread never
+     * carries one request's count into whatever it runs next.
+     */
+    public void remove() {
+        issued.remove();
     }
 }

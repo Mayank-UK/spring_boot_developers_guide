@@ -132,9 +132,8 @@ guide:server:jar:0.0.1-SNAPSHOT
 +- org.springframework.boot:spring-boot-starter-restclient:jar:4.1.1:compile
 |  \- org.springframework.boot:spring-boot-restclient:jar:4.1.1:compile
 +- io.zipkin.brave:brave-context-slf4j:jar:6.3.1:compile
-+- io.github.resilience4j:resilience4j-spring-boot3:jar:2.3.0:compile
-|  +- io.github.resilience4j:resilience4j-spring6:jar:2.3.0:compile
-|  \- io.github.resilience4j:resilience4j-micrometer:jar:2.3.0:compile
++- io.github.resilience4j:resilience4j-circuitbreaker:jar:2.4.0:compile
+|  \- io.github.resilience4j:resilience4j-core:jar:2.4.0:compile
 +- org.springframework.boot:spring-boot-starter-webclient:jar:4.1.1:compile
 |  +- org.springframework.boot:spring-boot-webclient:jar:4.1.1:compile
 |  \- io.projectreactor.netty:reactor-netty-http:jar:1.3.7:compile

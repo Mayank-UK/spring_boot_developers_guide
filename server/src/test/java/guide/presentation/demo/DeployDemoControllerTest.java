@@ -64,7 +64,7 @@ class DeployDemoControllerTest {
                 // deliberate differences: the values that NAME the environment
                 .andExpect(jsonPath("$.envRails[0].name").value("SPRING_PROFILES_ACTIVE"))
                 .andExpect(jsonPath("$.envRails[0].devValue").value("dev"))
-                .andExpect(jsonPath("$.envRails[0].prodValue").value("(unset → default)"))
+                .andExpect(jsonPath("$.envRails[0].prodValue").value("prod"))
                 .andExpect(jsonPath("$.envRails[1].name").value("GUIDE_DEPLOY_ENV"))
                 .andExpect(jsonPath("$.envRails[1].devValue").value("dev"))
                 // parity: the datasource rail is byte-identical in both stacks

@@ -45,8 +45,8 @@ public final class ComposeStack {
      */
     public static List<DeploymentInspection.EnvRail> envRails() {
         return List.of(
-                new DeploymentInspection.EnvRail("SPRING_PROFILES_ACTIVE", "dev", "(unset → default)",
-                        "dev boots the dev profile (GraphiQL mounted); prod sets nothing and runs the default profile"),
+                new DeploymentInspection.EnvRail("SPRING_PROFILES_ACTIVE", "dev", "prod",
+                        "dev boots the dev profile (GraphiQL mounted); prod boots the prod profile and refuses to start without SDG_JWT_SECRET + a real DB password (ProdSanityConfig)"),
                 new DeploymentInspection.EnvRail("GUIDE_DEPLOY_ENV", "dev", "(unset → local)",
                         "topic 36's inspector rail — same build, different answer per environment"),
                 new DeploymentInspection.EnvRail("SPRING_DATASOURCE_URL",

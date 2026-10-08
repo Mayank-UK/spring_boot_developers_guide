@@ -70,16 +70,17 @@ public final class FlaggedDecisions {
                             + "comfortably inside this repo's Boot 4.1.1 BOM (Logback "
                             + "1.5.38) on Java 25.",
                     "33 observability"),
-            new FlaggedDecision("io.github.resilience4j", "resilience4j-spring-boot3", "2.3.0",
-                    "The curriculum's named circuit-breaker library. The artifact name "
-                            + "says spring-boot3 but 2.3.0 is the Boot-4-compatible line: "
-                            + "dependency:tree under this repo's Boot 4.1.1 parent drags NO "
-                            + "Boot-3 Spring jars (only the versionless r4j core/annotations "
-                            + "the BOM resolves), and the context boots clean beside actuator "
-                            + "and micrometer-prometheus. Used PROGRAMMATICALLY ONLY — the "
-                            + "CircuitBreaker lives behind the domain-owned BreakerPort with "
-                            + "the r4j types confined to the data/reliability adapter, so the "
-                            + "starter's autoconfig/property surface is never engaged and "
-                            + "nothing hides the machinery the topic teaches.",
+            new FlaggedDecision("io.github.resilience4j", "resilience4j-circuitbreaker", "2.4.0",
+                    "The curriculum's named circuit-breaker library. Used PROGRAMMATICALLY "
+                            + "ONLY — the CircuitBreaker lives behind the domain-owned "
+                            + "BreakerPort with the r4j types confined to the data/"
+                            + "reliability adapter — and since the only package ever "
+                            + "imported is io.github.resilience4j.circuitbreaker, the pom "
+                            + "carries the CORE JAR, not a starter: zero Spring coupling, "
+                            + "Boot-4 compatible by construction (the same posture as "
+                            + "bucket4j). The 2.4 line also ships resilience4j-spring-"
+                            + "boot4, the Boot-4-native starter for annotation/yaml-driven "
+                            + "setups this demo deliberately does not use — nothing hides "
+                            + "the machinery the topic teaches.",
                     "39 reliability"));
 }

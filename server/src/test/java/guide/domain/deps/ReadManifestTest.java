@@ -64,7 +64,7 @@ class ReadManifestTest {
                 "com.bucket4j:bucket4j_jdk17-core",
                 "net.coobird:thumbnailator",
                 "net.logstash.logback:logstash-logback-encoder",
-                "io.github.resilience4j:resilience4j-spring-boot3"), coordinates);
+                "io.github.resilience4j:resilience4j-circuitbreaker"), coordinates);
     }
 
     @Test

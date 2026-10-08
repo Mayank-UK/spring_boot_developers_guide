@@ -274,12 +274,17 @@ public final class SecurityTopic {
                                 ".docker/docker-compose.prod.yml", """
                                 environment:
                                   # Phase 6 (data foundation): the datasource, by service name inside the
-                                  # compose network (mirrors the dev stack's server env exactly).
+                                  # compose network (mirrors the dev stack's server env — except the
+                                  # password, which prod takes from the deployer, see the rail below).
                                   - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide
                                   - SPRING_DATASOURCE_USERNAME=guide
-                                  - SPRING_DATASOURCE_PASSWORD=guide"""),
+                                  # Credential rail, same required-variable move as SDG_JWT_SECRET: prod
+                                  # refuses the dev default 'guide' (ProdSanityConfig would fail the boot
+                                  # anyway), and the postgres service below consumes the SAME variable —
+                                  # the database and the app cannot disagree on the password.
+                                  - SPRING_DATASOURCE_PASSWORD=${SDG_DB_PASSWORD:?SDG_DB_PASSWORD must be set to a real database password}"""),
                         text("sec:secrets:compose-note", """
-                                Read that block as the PATTERN, not the values: the image is identical in every environment (twelve-factor, topic 36), and compose is the deploy-time handoff — values move from a store into the container's environment; the app knows only property names. These values are dev-grade on purpose; a real deployment interpolates from the host's secret store, and ${VAR}?error=missing makes an absent secret a loud boot failure instead of a silent fallback. The .env discipline ties the ladder's bottom rung: a committed .env.example documents the SHAPE (names, dummy values) while the real .env stays ignored.""")),
+                                Read that block as the PATTERN, not the values: the image is identical in every environment (twelve-factor, topic 36), and compose is the deploy-time handoff — values move from a store into the container's environment; the app knows only property names. The URL and username are dev-grade literals kept minimal on purpose, while the password is already the real move — required-variable interpolation from the deployer's environment (the SAME variable the postgres service consumes, so the app and the database cannot disagree), and `${VAR:?message}` makes an absent secret a loud deploy-time failure instead of a silent fallback. The .env discipline ties the ladder's bottom rung: a committed .env.example documents the SHAPE (names, dummy values) while the real .env stays ignored.""")),
                 section("owasp-api-top-10-mapped-to-this-app", "OWASP API Top 10, mapped to this app",
                         "The ten API risks, each answered with the real code that defends it — and the honest gaps flagged, because a security map that admits nothing is marketing.",
                         text("sec:owasp:map", """

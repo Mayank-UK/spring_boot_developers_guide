@@ -1,0 +1,29 @@
+# Dependabot, minimal by design: weekly version radar for every package
+# ecosystem this repo actually carries. The opened PRs exercise the same
+# CI safety net the dependency-management topic teaches (mvn verify +
+# client test/build) — each update arrives as a small, reviewable diff.
+version: 2
+updates:
+  # The workflow/action pins (actions/checkout, setup-java, setup-node).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # The server's Maven graph (server/pom.xml — explicit pins and all).
+  - package-ecosystem: maven
+    directory: /server
+    schedule:
+      interval: weekly
+
+  # The client app and the host-run Playwright suite are separate npm
+  # roots, each with its own lockfile — one entry each.
+  - package-ecosystem: npm
+    directory: /client
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly

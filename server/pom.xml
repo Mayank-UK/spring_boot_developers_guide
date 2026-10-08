@@ -418,27 +418,29 @@
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-context-slf4j</artifactId>
         </dependency>
-        <!-- Topic 39 (reliability) — FLAGGED NEW DEP, version verified on repo1
-             Central (maven-metadata: 2.3.0 is the resilience4j-spring-boot3
-             line's latest, 2025-01; no Boot-4-native line exists yet). NOT
-             managed by the Boot BOM, so the version is explicit. Boot 4
-             compatibility VERIFIED EMPIRICALLY (2026-10-07, probe project):
-             the artifact drags no Boot 3 Spring jars (its Spring deps are
-             optional), its AutoConfiguration.imports file still loads under
-             Boot 4.1.1, and a full context boots cleanly WITH actuator +
-             micrometer-prometheus on the classpath. The demo wraps the
-             PROGRAMMATIC API behind a domain port (guide.domain.reliability
-             .BreakerPort) adapted in guide.data.reliability — the domain
-             layer never imports r4j (topic 32's dependency rule, enforced
-             by DependencyRuleTest) — no AOP needed, and state transitions
-             stay observable and sleep-free-drivable (transitionToHalfOpen
-             State via the port is the manual probe rail). Annotation
-             aspects would additionally need spring-boot-starter-aspectj
-             (already present here). -->
+        <!-- Topic 39 (reliability) — FLAGGED SWAP (2.4 line), artifact
+             CHOICE VERIFIED on repo1 Central (maven-metadata, 2026-10-08):
+             2.4.0 is the resilience4j line's latest stable (2026-03), and
+             the same 2.4 line ships resilience4j-spring-boot4 — the Boot-4-
+             native starter. NOT managed by the Boot BOM, so the version is
+             explicit. CHOSEN INSTEAD: the PROGRAMMATIC core artifact — the
+             only package this app ever imports is
+             io.github.resilience4j.circuitbreaker.* (CircuitBreaker,
+             CircuitBreakerConfig, CallNotPermittedException — all three
+             confined to guide.data.reliability.Resilience4jBreakerAdapter,
+             behind the domain-owned BreakerPort that DependencyRuleTest
+             enforces), so the starter's autoconfiguration/annotation/YAML
+             surface would be machinery the teaching cannot show. The core
+             jar carries ZERO Spring coupling — Boot-4 compatible by
+             construction, the same posture bucket4j holds. State
+             transitions stay observable and sleep-free-drivable
+             (transitionToHalfOpen State via the port is the manual probe
+             rail). Annotation aspects would need the starter plus
+             spring-boot-starter-aspectj (already present here). -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot3</artifactId>
-            <version>2.3.0</version>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>2.4.0</version>
         </dependency>
         <!-- Topic 41 (reactive-spring) — FLAGGED NEW DEP, versionless through the
              Boot 4.1.1 BOM: the dedicated WebClient starter Boot 4's
@@ -568,13 +570,14 @@
             <!-- Phase 12 (hardening): JaCoCo coverage GATES — guardrails, not
                  aspirations. prepare-agent attaches the execution recorder for
                  every surefire run (initialize); report writes target/site/
-                 jacoco/ (verify); check enforces LINE-coverage floors (verify,
+                 jacoco/ (verify); check enforces coverage floors (verify,
                  after report). MEASURED FIRST (2026-10-08, full 1163-test run,
                  jacoco 0.8.15 pinned versionless by the Boot parent): bundle
                  LINE coverage 88.4%; every floor below sits a few points under
                  the real number of the population it gates — the gate exists
                  to catch regressions, not to nag for more tests. LINE counter
-                 only (the unit a human reasons about); BUNDLE + PACKAGE
+                 everywhere except ONE bundle-level BRANCH gate (P13b, see
+                 below); BUNDLE + PACKAGE
                  elements only (per-class rules are churn); nothing excluded
                  from measurement — the thin/generated packages get their own
                  LOW floor instead (see the last rule) because excluding them
@@ -594,6 +597,28 @@
                                 <counter>LINE</counter>
                                 <value>COVEREDRATIO</value>
                                 <minimum>0.85</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                    <!-- P13b (2026-10-08): the one BRANCH gate — BUNDLE-level
+                         only, added measured-first like everything above.
+                         MEASURED on the full 1173-test run: bundle branch
+                         coverage 72.2% (3706 of 5134 branches; branches are
+                         sparser than lines, so the number sits lower than
+                         the LINE figure by nature). Floor 0.685 = 3.7 pts
+                         of headroom — same guardrail-not-aspiration posture:
+                         branch is the counter that catches an untested
+                         if/else a line count can forgive. Per-package branch
+                         floors are deliberately NOT added: small packages
+                         swing whole points per branch, which is flake, not
+                         signal. -->
+                    <rule>
+                        <element>BUNDLE</element>
+                        <limits>
+                            <limit>
+                                <counter>BRANCH</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.685</minimum>
                             </limit>
                         </limits>
                     </rule>

@@ -27,10 +27,15 @@ services:
       # stays clean; the secret arrives from the deployer's environment.
       - SDG_JWT_SECRET=${SDG_JWT_SECRET:?SDG_JWT_SECRET must be set to a real 32+ byte secret}
       # Phase 6 (data foundation): the datasource, by service name inside the
-      # compose network (mirrors the dev stack's server env exactly).
+      # compose network (mirrors the dev stack's server env — except the
+      # password, which prod takes from the deployer, see the rail below).
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide
       - SPRING_DATASOURCE_USERNAME=guide
-      - SPRING_DATASOURCE_PASSWORD=guide
+      # Credential rail, same required-variable move as SDG_JWT_SECRET: prod
+      # refuses the dev default 'guide' (ProdSanityConfig would fail the boot
+      # anyway), and the postgres service below consumes the SAME variable —
+      # the database and the app cannot disagree on the password.
+      - SPRING_DATASOURCE_PASSWORD=${SDG_DB_PASSWORD:?SDG_DB_PASSWORD must be set to a real database password}
       # Topic 21 (caching): mirrors the dev stack — Mongo URI and Redis host
       # by service name (the same env the dev compose gained).
       - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/guide
@@ -63,7 +68,10 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=guide
-      - POSTGRES_PASSWORD=guide
+      # Parity rail: the SAME required variable the server's
+      # SPRING_DATASOURCE_PASSWORD consumes — the DB and the app agree by
+      # construction, and an unset value fails `compose config` up front.
+      - POSTGRES_PASSWORD=${SDG_DB_PASSWORD:?SDG_DB_PASSWORD must be set to a real database password}
       - POSTGRES_DB=guide
     volumes:
       - sbdg-pg-data:/var/lib/postgresql/data

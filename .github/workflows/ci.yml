@@ -4,15 +4,24 @@
 # where real engines are required — no service containers wired here yet).
 # `verify` (not `test`) so the JaCoCo LINE-coverage gate — bound to the verify
 # phase in server/pom.xml — is enforced in CI exactly as in local full runs.
+# Hygiene: pushes trigger only on master (pull_request already covers branch
+# work, so same-repo PRs stop double-running), superseded runs cancel, and
+# both jobs carry an explicit wall-clock ceiling.
 name: CI
 
 on:
   push:
+    branches: [master]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   server:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: server
@@ -28,6 +37,7 @@ jobs:
 
   client:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: client

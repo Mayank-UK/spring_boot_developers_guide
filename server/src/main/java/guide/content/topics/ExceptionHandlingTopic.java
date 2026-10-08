@@ -133,7 +133,7 @@ public final class ExceptionHandlingTopic {
                         text("tax:envelope-shape", """
                                 The envelope is deliberately boring: one wrapper object, one nested error, three canonical keys — code (machine-readable, the enum's), message (human-readable), requestId (the correlation id the request-id filter stamped, so an error pasted into a bug report finds exactly one log line) — plus the failure's details merged in BESIDE them (canonical wins on collision). Every failure the app produces — every 400, every 503, every injected demo failure below — leaves in this exact shape, which is why the guide's own client parses failures with one code path. The taxonomy is also the demo: GET /api/demo/errors/catalog serves these eight rows plus the two framework rows you will meet in the-404-problem — kind, status, code, when-it-fires, and the exact example message /inject renders for that kind. Catalog and injector share one source of descriptors, so the docs CANNOT drift from the behavior.""")),
                 section("controller-advice-the-global-handler", "Controller advice: the global handler",
-                        "One @RestControllerAdvice renders every failure — dissected branch by branch: selection by specificity, the validation branch, the framework branch, the catch-all, and the edge where no advice can help.",
+                        "One @RestControllerAdvice renders every failure — dissected branch by branch: selection by specificity, the validation branch, the framework branch, the data-outage 503 net, the catch-all it narrows, and the edge where no advice can help.",
                         text("adv:one-place", """
                                 The rendering edge is ONE class, GlobalExceptionHandler — a @RestControllerAdvice, which means: for ANY controller in the app, when a handler method throws, the DispatcherServlet's exception resolvers consult this class FIRST, matching @ExceptionHandler methods by exception type. It is the express error middleware's exact Spring counterpart, and its value is the same: one place shapes every failure, so no controller hand-builds an error response and no two routes can disagree about the envelope. The workhorse branch renders AppExceptions — every typed failure the use cases produce:"""),
                         code("adv:appexception", "java",
@@ -227,7 +227,25 @@ public final class ExceptionHandlingTopic {
                                             });
                                 }"""),
                         text("adv:codefor-reading", """
-                                404 maps to the taxonomy's not_found, 503 to service_unavailable; a status the taxonomy never emits (405) becomes the reason phrase snake_cased — method_not_allowed. The envelope stays the one contract even for framework-raised statuses, and the resolver's specificity rule holds across the whole file: an AppException of a specific subclass beats the AppException branch, the AppException branch beats Exception, and nothing in the file depends on the ORDER the methods are written.""")),
+                                404 maps to the taxonomy's not_found, 503 to service_unavailable; a status the taxonomy never emits (405) becomes the reason phrase snake_cased — method_not_allowed. The envelope stays the one contract even for framework-raised statuses, and the resolver's specificity rule holds across the whole file: an AppException of a specific subclass beats the AppException branch, the AppException branch beats Exception, and nothing in the file depends on the ORDER the methods are written."""),
+                        text("adv:dataaccess-net", """
+                                One branch more — the newest in the file, and unlike the framework fix it repairs no bug: it refines a truthful 500 into a PRECISE 503. When a backing store is down under a live-routed scenario, Spring's data layer surfaces the outage as its DataAccessException family — the JDBC adapters translate every driver-level fault (connection refused, dead pool, timeout) into that hierarchy on the way up. A database outage is therefore a KNOWN exception type at the edge, and known types earn specific branches: this one maps the family onto the taxonomy's UNAVAILABLE kind — the same 503 service_unavailable the optional-service topics serve from their guarded routers — so the degrade-gracefully rule holds even on paths with no such router (a JdbcTemplate call against an absent PostgreSQL, for instance):"""),
+                        code("adv:dataaccess", "java",
+                                "guide/presentation/GlobalExceptionHandler.java — the data-outage net: a known failure family becomes the typed 503, never the anonymous 500",
+                                "server/src/main/java/guide/presentation/GlobalExceptionHandler.java", """
+                                @ExceptionHandler(DataAccessException.class)
+                                ResponseEntity<ErrorResponse> handleDataAccess(DataAccessException exception,
+                                        HttpServletRequest request) {
+                                    String requestId = requestId(request);
+                                    log.error("request failed: kind={} status={} requestId={}",
+                                            FailureKind.UNAVAILABLE, FailureKind.UNAVAILABLE.httpStatus(), requestId, exception);
+                                    return ResponseEntity.status(FailureKind.UNAVAILABLE.httpStatus())
+                                            .body(ErrorResponse.of(FailureKind.UNAVAILABLE.errorCode(),
+                                                    "A backing store is unreachable — the service is degraded until it returns",
+                                                    requestId, null));
+                                }"""),
+                        text("adv:dataaccess-reading", """
+                                Every field comes from the taxonomy — kind UNAVAILABLE, status 503, code service_unavailable — and the fixed, detail-free message is deliberate: an infrastructure outage has no per-request detail worth leaking, and the caller's correct next move (back off, retry, watch the health endpoint) needs no internals. The catch-all's job narrows honestly every time a branch like this lands: it remains the final net for the TRULY unexpected — a genuine bug — while every failure class the app can NAME (a typed failure, a validation miss, a framework miss, a data outage) is caught one branch higher and answers in its own vocabulary. That is how an error handler grows without a rewrite: name the failure, add the branch, let specificity do the routing.""")),
                 section("problemdetail-rfc-9457", "ProblemDetail: RFC 9457, the standard shape",
                         "The IETF's answer to error envelopes — Spring supports it natively — and this app's dual-representation demo: one failure, two contracts, chosen at the edge.",
                         text("pd:the-standard", """
@@ -376,7 +394,7 @@ public final class ExceptionHandlingTopic {
                                             failure.kind(), statusCode, requestId, failure.message());
                                 }"""),
                         text("log:policy-reading", """
-                                Same shape, different arms: warn carries the MESSAGE (the client's fault is legible — show what they sent wrong), error carries the EXCEPTION (a stack trace is the beginning of diagnosis; for a 400 it is noise). The framework branch follows the identical split — NoResourceFoundException logs warn at 404, because "this URL does not exist" is not an incident — and the problem-detail branch logs the SAME lines plus rendition=problem-detail, so a route's contract choice never hides its failure from the log.
+                                Same shape, different arms: warn carries the MESSAGE (the client's fault is legible — show what they sent wrong), error carries the EXCEPTION (a stack trace is the beginning of diagnosis; for a 400 it is noise). The framework branch follows the identical split — NoResourceFoundException logs warn at 404, because "this URL does not exist" is not an incident — and the problem-detail branch logs the SAME lines plus rendition=problem-detail, so a route's contract choice never hides its failure from the log. The data-outage branch logs error at 503 with its stack — a dead dependency is nobody's bug but still somebody's page.
 
                                 WHAT NEVER LOGS is the other half of the policy, and it is a SECURITY rule (the security topic's threat-model habit applied to logs): no request payloads, no rejected values, no secrets. The validation branch is the worked example — field NAMES on the log line, messages and rejected values only in the response:"""),
                         code("log:fields", "java",

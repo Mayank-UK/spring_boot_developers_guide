@@ -40,7 +40,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   before counting starts, so the measured reads really hit the database
  *   instead of the first-level cache;
  * - JpaQueryCounter brackets exactly the read window: reset() before, read
- *   after — seeding inserts are never counted as page queries.
+ *   after, remove() in a finally — seeding inserts are never counted as page
+ *   queries, and a pooled thread never inherits the last request's count.
  *
  * The locking demo needs the opposite honesty — a COMMITTED row two
  * independent transactions can fight over — so it plants one specimen,
@@ -82,28 +83,35 @@ public final class PgJpaProbe implements JpaProbePort {
             entityManager.clear();
             counter.reset();
             long start = System.nanoTime();
-            List<PostEntity> page = switch (mode) {
-                case N_PLUS_ONE -> posts.findByTitleStartingWith(
-                        SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
-                case JOIN_FETCH -> posts.findPageWithEntriesJoinFetch(SPECIMEN_PREFIX + "%");
-                case ENTITY_GRAPH -> posts.findWithEntriesByTitleStartingWith(
-                        SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
-                case BATCH -> posts.findByTitleStartingWith(
-                        SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
-            };
-            int entriesLoaded = 0;
-            for (PostEntity post : page) {
-                // The consume loop is where lazy loading happens: N_PLUS_ONE
-                // pays one SELECT per row, BATCH pays one per @BatchSize(8)
-                // group, JOIN_FETCH/ENTITY_GRAPH pay nothing extra here.
-                entriesLoaded += (mode == ProbeMode.BATCH
-                        ? post.getBatchedEntries() : post.getEntries()).size();
+            // The read window: everything between reset() and issued() is the
+            // measurement. remove() in the finally closes the bracket — the
+            // pooled thread must not carry this count into its next request.
+            try {
+                List<PostEntity> page = switch (mode) {
+                    case N_PLUS_ONE -> posts.findByTitleStartingWith(
+                            SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
+                    case JOIN_FETCH -> posts.findPageWithEntriesJoinFetch(SPECIMEN_PREFIX + "%");
+                    case ENTITY_GRAPH -> posts.findWithEntriesByTitleStartingWith(
+                            SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
+                    case BATCH -> posts.findByTitleStartingWith(
+                            SPECIMEN_PREFIX, Sort.by(Sort.Direction.ASC, "createdAt"));
+                };
+                int entriesLoaded = 0;
+                for (PostEntity post : page) {
+                    // The consume loop is where lazy loading happens: N_PLUS_ONE
+                    // pays one SELECT per row, BATCH pays one per @BatchSize(8)
+                    // group, JOIN_FETCH/ENTITY_GRAPH pay nothing extra here.
+                    entriesLoaded += (mode == ProbeMode.BATCH
+                            ? post.getBatchedEntries() : post.getEntries()).size();
+                }
+                int queries = counter.issued();
+                long wallTimeNanos = System.nanoTime() - start;
+                status.setRollbackOnly();
+                return new ProbeReport(mode.wireName(), size, queries, page.size(), entriesLoaded,
+                        wallTimeNanos, verdictFor(mode, size, queries));
+            } finally {
+                counter.remove();
             }
-            int queries = counter.issued();
-            long wallTimeNanos = System.nanoTime() - start;
-            status.setRollbackOnly();
-            return new ProbeReport(mode.wireName(), size, queries, page.size(), entriesLoaded,
-                    wallTimeNanos, verdictFor(mode, size, queries));
         });
     }
 
@@ -185,10 +193,14 @@ public final class PgJpaProbe implements JpaProbePort {
         activation.ensureReady();
         if (classProjection) {
             counter.reset();
-            Page<PostTitleView> page = posts.findTitleViewPage(PageRequest.of(number, size));
-            int queries = counter.issued();
-            List<PageRow> rows = page.map(row -> new PageRow(row.title(), row.status().wireName(), 0)).getContent();
-            return report(number, size, page, queries, "class projection (constructor expression)", rows);
+            try {
+                Page<PostTitleView> page = posts.findTitleViewPage(PageRequest.of(number, size));
+                int queries = counter.issued();
+                List<PageRow> rows = page.map(row -> new PageRow(row.title(), row.status().wireName(), 0)).getContent();
+                return report(number, size, page, queries, "class projection (constructor expression)", rows);
+            } finally {
+                counter.remove();
+            }
         }
         // The dynamic-filter path: one Specification, composed from zero or one
         // predicate — the same problem PgPostRepository solved with a StringBuilder.
@@ -196,12 +208,16 @@ public final class PgJpaProbe implements JpaProbePort {
                 ? PostSpecifications.all()
                 : PostSpecifications.hasStatus(status);
         counter.reset();
-        Page<PostEntity> page = posts.findAll(spec, PageRequest.of(number, size));
-        int queries = counter.issued();
-        List<PageRow> rows = page.map(post -> new PageRow(
-                post.getTitle(), post.getStatus().wireName(), post.getVersion())).getContent();
-        String label = "specification (dynamic filter: " + (status == null ? "none)" : "status=" + status.wireName() + ")");
-        return report(number, size, page, queries, label, rows);
+        try {
+            Page<PostEntity> page = posts.findAll(spec, PageRequest.of(number, size));
+            int queries = counter.issued();
+            List<PageRow> rows = page.map(post -> new PageRow(
+                    post.getTitle(), post.getStatus().wireName(), post.getVersion())).getContent();
+            String label = "specification (dynamic filter: " + (status == null ? "none)" : "status=" + status.wireName() + ")");
+            return report(number, size, page, queries, label, rows);
+        } finally {
+            counter.remove();
+        }
     }
 
     private PageReport report(int number, int size, Page<?> page, int queries, String projection,
