@@ -346,10 +346,10 @@ public final class DependencyManagementTopic {
                         code("term:curl-manifest", "bash",
                                 "the live manifest: curated artifacts with runtime-resolved versions + the flagged registry",
                                 null, """
-                                # runtime truth for the key artifacts (jq optional — the raw JSON reads fine)
+                                # runtime truth for the key artifacts (the raw JSON reads fine)
                                 curl -s localhost:8080/api/demo/deps/manifest | head -40
 
-                                # one artifact's row, version included: grep beats jq when jq is absent
+                                # one artifact's row, version included: grep over the raw JSON
                                 curl -s localhost:8080/api/demo/deps/manifest | grep -A 3 '"artifactId": "grpc-stub"'
 
                                 # the summarized tree snapshot + its mediation conflicts

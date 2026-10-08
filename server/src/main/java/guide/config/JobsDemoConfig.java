@@ -80,8 +80,13 @@ public class JobsDemoConfig {
 
     // ---- the queue: port → in-memory adapter, plus the sender ----
 
+    /**
+     * Declared as the CONCRETE adapter (which still satisfies every JobQueue
+     * injection point): the shared demo-reset sweep needs the console-only
+     * clear() handle, which is not part of the queue's persistence contract.
+     */
     @Bean
-    JobQueue jobQueue() {
+    InMemoryJobQueue jobQueue() {
         return new InMemoryJobQueue();
     }
 

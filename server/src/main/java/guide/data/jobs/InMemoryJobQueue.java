@@ -77,6 +77,17 @@ public final class InMemoryJobQueue implements JobQueue {
                 .toList();
     }
 
+    /**
+     * Demo-console handle for the shared reset sweep: forget every record.
+     * Records are claimed-then-saved by the worker; a job claimed BEFORE
+     * the clear whose save lands after it does reappear — the sweep treats
+     * that as acceptable demo-store semantics (the alternative, draining a
+     * live worker, is machinery a teaching console does not need).
+     */
+    public synchronized void clear() {
+        records.clear();
+    }
+
     private void evictBeyondCeiling() {
         while (records.size() > MAX_RECORDS) {
             String victim = records.values().stream()

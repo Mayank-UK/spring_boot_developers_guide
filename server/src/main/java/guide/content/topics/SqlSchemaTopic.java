@@ -296,31 +296,37 @@ public final class SqlSchemaTopic {
                 section("terminal-companion", "Terminal companion",
                         "The whole topic through curl: the explorer, one table's DDL summary, the uuid experiment — with the psql equivalents alongside.",
                         text("term:setup", """
-                                The server carries everything this topic taught, live. The tour below speaks to a server on localhost:8080 (docker compose up, or your dev container); jq pretty-prints. psql users get the same facts with backslash commands — \\d posts is the explorer per table, \\d+ adds V4's COMMENT ON annotations, \\di lists indexes — but the curl tour works from anywhere the API does. Watch the FIRST call on a fresh database: it runs the migrations lazily (V1 through V4) and then answers — the activation seam in motion — while every later call is a plain catalog read."""),
+                                The server carries everything this topic taught, live. The tour below speaks to a server on localhost:8080 (docker compose up, or your dev container); responses print raw and read fine. psql users get the same facts with backslash commands — \\d posts is the explorer per table, \\d+ adds V4's COMMENT ON annotations, \\di lists indexes — but the curl tour works from anywhere the API does. Watch the FIRST call on a fresh database: it runs the migrations lazily (V1 through V4) and then answers — the activation seam in motion — while every later call is a plain catalog read."""),
                         code("term:tables", "bash",
                                 "every table this guide owns, then one table in full detail", null, """
                                 # every user table (including flyway_schema_history — it is ours too)
-                                curl -s localhost:8080/api/demo/db/schema | jq '.tables[].name'
+                                curl -s localhost:8080/api/demo/db/schema \\
+                                  | python3 -c 'import json,sys; print([t["name"] for t in json.load(sys.stdin)["tables"]])'
+                                # → ["flyway_schema_history","posts","comments", …]
 
                                 # the specimen in full: columns, constraints, indexes, sizes, annotations
-                                curl -s 'localhost:8080/api/demo/db/schema?table=posts' | jq '.tables[0] | {name, comment, totalSize, columns, constraints}'
+                                curl -s 'localhost:8080/api/demo/db/schema?table=posts'
 
                                 # an unknown table answers the typed 404, naming what IS known
-                                curl -s 'localhost:8080/api/demo/db/schema?table=dropout' | jq '.error'
+                                curl -s 'localhost:8080/api/demo/db/schema?table=dropout'
+                                # → {"error":{"code":"not_found", … "details" naming the known tables}}
                                 """),
                         code("term:ddl-uuid", "bash",
                                 "the DDL summary, then the key-strategy experiment", null, """
                                 # catalog-derived DDL (labeled honestly: PostgreSQL does not store the original script)
-                                curl -s localhost:8080/api/demo/db/schema/ddl/audit_log | jq -r '.ddl'
+                                curl -s localhost:8080/api/demo/db/schema/ddl/audit_log \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["ddl"])'
 
                                 # the experiment: 5000 rows per side, index bytes + locality verdict
-                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=5000' | jq '{rows, indexByteDelta, verdict}'
+                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=5000'
 
                                 # grow it and watch the index-size gap open (tables truncate between runs)
-                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=50000' | jq '{v4: .uuidV4.primaryKeyIndexSize, v7: .uuidV7.primaryKeyIndexSize}'
+                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=50000'
+                                # → compare uuidV4.primaryKeyIndexSize against uuidV7.primaryKeyIndexSize
 
                                 # out-of-bounds row counts answer the validation envelope, not a stack trace
-                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=0' | jq '.error.code'
+                                curl -s -X POST 'localhost:8080/api/demo/db/uuid/compare?rows=0'
+                                # → {"error":{"code":"validation_failed", …}}
                                 """),
                         text("term:what-to-notice", """
                                 Three things to notice on the tour. The explorer's ?table= miss is a TYPED 404 whose details name the known tables — defensive input handling shaped like an API. The uuid report's verdict states only what was measured, including the small-N case where both indexes fit the same page count — the honesty the test suite encodes by asserting structure, never exact sizes. And after the experiment the lab tables are empty again (the finally block truncated them): check uuid_v7_demo in the explorer — the demo cleaned up after itself, as a good tenant of a shared database should.""")));

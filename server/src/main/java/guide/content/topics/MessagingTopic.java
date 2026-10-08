@@ -427,8 +427,8 @@ When to graduate off Redis Streams — a checklist, not a ladder. FOR DURABILITY
                                   -H 'content-type: application/json' \\
                                   -d "{\"postId\":\"$POST_ID\",\"publisher\":\"outbox\",\"failAfterPublish\":true}"
                                 # → 500 {"error":{"code":"internal_error"}}  — but look:
-                                curl -s localhost:8080/api/demo/msg/outbox/state | jq '.stats'
-                                # → {"pending":1,"delivered":0,"dead":0}
+                                curl -s localhost:8080/api/demo/msg/outbox/state
+                                # → …"stats":{"pending":1,"delivered":0,"dead":0} — the row survived
                                 curl -s -X POST localhost:8080/api/demo/msg/outbox/relay
                                 # → {"claimed":1,"published":1,"streamIds":["1761-0"],"skippedInFlight":false,…}
 

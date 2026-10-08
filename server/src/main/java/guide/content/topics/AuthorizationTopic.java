@@ -372,7 +372,7 @@ public final class AuthorizationTopic {
 
                                 Where to go from here: topic 25 hardens the SURROUNDINGS (headers, CORS, CSRF, rate limits, injection) so the decisions this topic taught survive contact with hostile traffic; the architecture topic (32) re-meets these layers as the dependency rule in action; and the terminal companion below walks every verdict in this topic by curl, envelope by envelope.""")),
                 section("terminal-companion", "Terminal companion",
-                        "The whole island by curl: switch identities, read the live matrix, get denied three different ways, publish as admin, and watch the trap fire — jq assumed.",
+                        "The whole island by curl: switch identities, read the live matrix, get denied three different ways, publish as admin, and watch the trap fire — plain curl only.",
                         text("terminal:intro", """
                                 With the stack running (server on :8080), the tour walks every layer. The act-as switch is the vehicle: POST /api/demo/authz/act-as with a username establishes a session (cookie jar plays the browser) — no password, because authorization assumes authentication happened; switching is how you watch the SAME endpoint answer differently per identity. Seeded users: alice (admin+staff), bob (staff), carol (reader)."""),
                         code("terminal:act-as-matrix", "bash",
@@ -381,39 +381,41 @@ public final class AuthorizationTopic {
                                 # act as alice — the jar plays the browser; note: no password, tour-only
                                 curl -s -c /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"alice"}' | jq '{user, via}'
+                                  -d '{"username":"alice"}'
                                 # → {"user":{"username":"alice","roles":["admin","staff"]},"via":"session (act-as)"}
 
                                 # the role→action matrix, rendered from the REAL RolePolicy
-                                curl -s localhost:8080/api/demo/authz/matrix | jq '.roleMatrix'
-                                # → [{"role":"reader","allowedActions":["read","list"]},
+                                curl -s localhost:8080/api/demo/authz/matrix
+                                # → …"roleMatrix":[{"role":"reader","allowedActions":["read","list"]},
                                 #     {"role":"staff","allowedActions":["read","list","publish"]}, …]
 
                                 # one user's full verdict column — computed, not hardcoded
                                 curl -s localhost:8080/api/demo/authz/matrix \\
-                                  | jq '[.rows[] | select(.username=="carol" and .action=="publish")] | unique_by(.allowed)'
+                                  | python3 -c 'import json,sys; print([r for r in json.load(sys.stdin)["rows"] if r["username"]=="carol" and r["action"]=="publish"])'
                                 # → [{"allowed":false,"checkedBy":"role-policy",
                                 #      "reason":"no role of carol allows 'publish'"}]"""),
                         code("terminal:filtering", "bash",
                                 "the query-shapes-authz lesson: same endpoint, three different lists",
                                 null, """
-                                # alice (admin) sees all six documents
-                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents | jq '[.documents[].id]'
+                                # alice (admin) sees all six documents — just the ids, for the comparing eye
+                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents \\
+                                  | python3 -c 'import json,sys; print([d["id"] for d in json.load(sys.stdin)["documents"]])'
                                 # → ["doc-alice-private","doc-alice-team","doc-bob-private",
                                 #     "doc-bob-team","doc-carol-private","doc-roadmap"]
 
                                 # switch to bob (staff): alice's and carol's PRIVATE rows vanish
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
-                                  -H 'content-type: application/json' -d '{"username":"bob"}' | jq '.user.username'
-                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents \\
-                                  | jq '[.documents[] | {id, visibleBecause}]'
-                                # → [{"id":"doc-alice-team","visibleBecause":"team visibility + the staff role"},
-                                #     {"id":"doc-bob-private","visibleBecause":"caller owns this document"}, …]
+                                  -H 'content-type: application/json' -d '{"username":"bob"}'
+                                # → {"user":{"username":"bob", …}} — the switch took
+                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents
+                                # → each doc carries its id and its visibleBecause: "team visibility + the staff role",
+                                #     "caller owns this document", … — alice's and carol's private rows are GONE
 
                                 # carol (reader): the team-shared rows vanish too — no staff role
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' -d '{"username":"carol"}' >/dev/null
-                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents | jq '[.documents[].id]'
+                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents \\
+                                  | python3 -c 'import json,sys; print([d["id"] for d in json.load(sys.stdin)["documents"]])'
                                 # → ["doc-carol-private","doc-roadmap"]"""),
                         code("terminal:denials", "bash",
                                 "three denials, three layers, one envelope shape",
@@ -425,24 +427,24 @@ public final class AuthorizationTopic {
                                 # back to bob — the in-use-case layer: a policy 403 in OUR envelope
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' -d '{"username":"bob"}' >/dev/null
-                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents/doc-alice-private | jq '.error'
-                                # → {"checkedBy":"ownership-policy",
+                                curl -s -b /tmp/authz.jar localhost:8080/api/demo/authz/documents/doc-alice-private
+                                # → {"error":{"checkedBy":"ownership-policy",
                                 #     "message":"private to alice (and admins) — caller is neither",
-                                #     "code":"forbidden","requestId":"…"}
+                                #     "code":"forbidden","requestId":"…"}}
 
                                 # the ANNOTATION layer, bean half: bob (staff) passes hasAnyRole,
                                 # then @authz.canPublish denies — not owner, not admin
                                 curl -s -b /tmp/authz.jar -X POST \\
-                                  localhost:8080/api/demo/authz/documents/doc-alice-private/publish | jq '.error'
-                                # → {"code":"forbidden",
-                                #     "message":"access denied by method security — …","requestId":"…"}
+                                  localhost:8080/api/demo/authz/documents/doc-alice-private/publish
+                                # → {"error":{"code":"forbidden",
+                                #     "message":"access denied by method security — …","requestId":"…"}}
 
                                 # the ANNOTATION layer, role half: carol (reader) dies at hasAnyRole
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' -d '{"username":"carol"}' >/dev/null
                                 curl -s -b /tmp/authz.jar -X POST \\
-                                  localhost:8080/api/demo/authz/documents/doc-carol-private/publish | jq '.error.code'
-                                # → "forbidden" — jq quotes its strings"""),
+                                  localhost:8080/api/demo/authz/documents/doc-carol-private/publish
+                                # → {"error":{"code":"forbidden", …}} — same verdict, role half"""),
                         code("terminal:publish-and-trap", "bash",
                                 "publish as admin (the escape hatch), then watch the self-invocation trap fire",
                                 null, """
@@ -450,23 +452,22 @@ public final class AuthorizationTopic {
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' -d '{"username":"alice"}' >/dev/null
                                 curl -s -b /tmp/authz.jar -X POST \\
-                                  localhost:8080/api/demo/authz/documents/doc-bob-private/publish | jq '{enforcedBy, effect}'
+                                  localhost:8080/api/demo/authz/documents/doc-bob-private/publish
                                 # → {"enforcedBy":"method security (@PreAuthorize: role SpEL + @authz bean), …",
                                 #     "effect":"visibility private→public — now readable by all"}
 
                                 # the @PostAuthorize specimen: alice is ADMIN but not the OWNER —
                                 # returnObject.owner() == authentication.name is blunter than policy
                                 curl -s -b /tmp/authz.jar \\
-                                  localhost:8080/api/demo/authz/documents/doc-bob-team/owner-view | jq '.error.code'
-                                # → "forbidden"
+                                  localhost:8080/api/demo/authz/documents/doc-bob-team/owner-view
+                                # → {"error":{"code":"forbidden", …}}
 
                                 # the trap, live as bob: direct call checked, internal call NOT
                                 curl -s -c /tmp/authz.jar -b /tmp/authz.jar -X POST localhost:8080/api/demo/authz/act-as \\
                                   -H 'content-type: application/json' -d '{"username":"bob"}' >/dev/null
                                 curl -s -b /tmp/authz.jar \\
-                                  localhost:8080/api/demo/authz/specimens/self-invocation \\
-                                  | jq '{caller: .caller.username, directCall, internalCall}'
-                                # → {"caller":"bob",
+                                  localhost:8080/api/demo/authz/specimens/self-invocation
+                                # → {"caller":{"username":"bob", …},
                                 #     "directCall":{"checked":true,"allowed":false},
                                 #     "internalCall":{"checked":false,"allowed":true,"returned":"the admin-only note …}}"""),
                         text("terminal:close", """

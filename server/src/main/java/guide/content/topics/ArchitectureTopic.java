@@ -402,25 +402,30 @@ public final class ArchitectureTopic {
                                 THE SAME ARTIFACTS, no browser required — and the terminal shows what the panel abstracts: the raw marker sequence, the raw timings object, the census as plain numbers. Start the server (docker compose up, or run GuideApplication) on any port — the tracer derives the self-call's base URI from the incoming request, so nothing here is port-hardcoded beyond the conventional 8080. Take the tour; the last command is the whole topic in one line:"""),
                         code("arch:term-trace", "bash", "one real internal request — the layered story, then just its timings", null, """
                                 # the whole layered story, step by step, evidence citations included:
-                                curl -s 'localhost:8080/api/demo/arch/trace?target=content' | jq '.steps[] | .label'
+                                curl -s 'localhost:8080/api/demo/arch/trace?target=content' \\
+                                  | python3 -c 'import json,sys; print([s["label"] for s in json.load(sys.stdin)["steps"]])'
 
                                 # the other target — the posts substrate, fake or live by scenario:
-                                curl -s 'localhost:8080/api/demo/arch/trace?target=posts' | jq '.timings'
+                                curl -s 'localhost:8080/api/demo/arch/trace?target=posts' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["timings"])'
 
                                 # both correlation ids — two requests, one nested inside the other:
                                 curl -s 'localhost:8080/api/demo/arch/trace?target=content' \\
-                                  | jq '{outer: .outer.requestId, inner: .inner.requestId}'"""),
+                                  | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["outer"]["requestId"], d["inner"]["requestId"])'"""),
                         code("arch:term-map", "bash", "the computed census — layers, the post port's adapters and binding", null, """
                                 # class counts per layer (assert ranges, never totals — the tree grows):
-                                curl -s localhost:8080/api/demo/arch/map | jq '.layers[] | {layer, classes}'
+                                curl -s localhost:8080/api/demo/arch/map \\
+                                  | python3 -c 'import json,sys; print([(l["layer"], l["classes"]) for l in json.load(sys.stdin)["layers"]])'
 
                                 # the taught port, its three adapters, and its single composition-root wire:
                                 curl -s localhost:8080/api/demo/arch/map \\
-                                  | jq '.ports[] | select(.port | endswith("PostRepository"))'
+                                  | python3 -c 'import json,sys; print([p for p in json.load(sys.stdin)["ports"] if p["port"].endswith("PostRepository")])'
 
                                 # the exemption ledger — every bend, with reasons; watch for staleness:
-                                curl -s localhost:8080/api/demo/arch/map | jq '.teachingExhibits[] | .file'
-                                curl -s localhost:8080/api/demo/arch/map | jq '.domainExemptions | length'"""),
+                                curl -s localhost:8080/api/demo/arch/map \\
+                                  | python3 -c 'import json,sys; print([e["file"] for e in json.load(sys.stdin)["teachingExhibits"]])'
+                                curl -s localhost:8080/api/demo/arch/map \\
+                                  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["domainExemptions"]))'"""),
                         code("arch:term-enforce", "bash", "the rule itself, on your working copy — green means the tree still points inward", null, """
                                 # the dependency rule, enforced (add -Dtest=DependencyRuleTest to scope it):
                                 docker run --rm -v "$PWD":/repo -w /repo/server \\

@@ -48,4 +48,9 @@ public final class RecordingEmailSender implements EmailSender {
     public synchronized List<SentEmail> sent() {
         return List.copyOf(sent);
     }
+
+    /** Demo-console handle for the shared reset sweep: forget every receipt. */
+    public synchronized void clear() {
+        sent.clear();
+    }
 }

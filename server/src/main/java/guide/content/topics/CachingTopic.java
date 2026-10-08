@@ -312,7 +312,7 @@ public final class CachingTopic {
                                   "localhost:8080/api/demo/caching/http-cache/$POST"
                                 # → HTTP/1.1 304 — validators echoed, NO body: the bytes did not ship
 
-                                curl -s localhost:8080/api/demo/caching/http-cache/headers | jq .
+                                curl -s localhost:8080/api/demo/caching/http-cache/headers
                                 # the introspection: the exact headers, each one's why, the 4-step round trip
                                 """),
                         text("term:outro", """

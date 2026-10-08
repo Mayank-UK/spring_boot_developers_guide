@@ -468,51 +468,51 @@ public final class JdbcSqlTopic {
                 section("terminal-companion", "Terminal companion",
                         "All six demos by curl — the same endpoints the consoles drive, with responses worth reading whole.",
                         text("terminal:intro", """
-                                With the stack running (server on :8080, PostgreSQL up), the tour walks every demo in order — injection first, because habit formation should hurt a little. jq assumed; the first call pays migration + seeding for everything after it."""),
+                                With the stack running (server on :8080, PostgreSQL up), the tour walks every demo in order — injection first, because habit formation should hurt a little. Responses print raw and read fine; the first call pays migration + seeding for everything after it."""),
                         code("terminal:safety", "bash",
                                 "the injection showdown — both doors, then the UNION escape against the role wall",
                                 null, """
                                 curl -s -X POST localhost:8080/api/demo/db/sql/safety \\
-                                  -H 'content-type: application/json' -d '{}' | jq
+                                  -H 'content-type: application/json' -d '{}'
                                 # → parameterized.rows [] · vulnerable.rows [3 rows, secrets leaked]
                                 #   vulnerable.sqlShown shows the payload INSIDE the WHERE clause
                                 curl -s -X POST localhost:8080/api/demo/db/sql/safety \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"payload":"'' UNION SELECT id::text, title, body FROM posts --"}' | jq .vulnerable
-                                # → rows [] · containmentError "permission denied for table posts"
+                                  -d '{"payload":"'' UNION SELECT id::text, title, body FROM posts --"}'
+                                # → vulnerable.rows [] · containmentError "permission denied for table posts"
                                 #   the restricted role capped the blast radius — least privilege"""),
                         code("terminal:migrations", "bash",
                                 "the ledger, then the idempotent apply",
                                 null, """
-                                curl -s localhost:8080/api/demo/db/migrations | jq '{summary, applied}'
+                                curl -s localhost:8080/api/demo/db/migrations
                                 # → "N applied, 0 pending: 12" · V1 posts … V10 inventory … V12 search
-                                curl -s -X POST localhost:8080/api/demo/db/migrations/apply | jq
+                                curl -s -X POST localhost:8080/api/demo/db/migrations/apply
                                 # → {"migrationsApplied":0, … "note":"idempotent by construction…"}"""),
                         code("terminal:lab", "bash",
                                 "the SQL lab — named queries only, SQL beside rows",
                                 null, """
-                                curl -s 'localhost:8080/api/demo/db/sql/lab' | jq '.available'
-                                # → ["cte","window","lag","aggregate"]
-                                curl -s 'localhost:8080/api/demo/db/sql/lab?query=lag' | jq '.rows[-1]'
-                                # → Donald Knuth, hired 140 days after the department's previous hire
-                                curl -s 'localhost:8080/api/demo/db/sql/lab?query=bogus' | jq .error.code
-                                # → "validation_failed" — unknown names never become SQL"""),
+                                curl -s 'localhost:8080/api/demo/db/sql/lab'
+                                # → the "available" list: ["cte","window","lag","aggregate"]
+                                curl -s 'localhost:8080/api/demo/db/sql/lab?query=lag'
+                                # → the LAST row of "rows": Donald Knuth, hired 140 days after the department's previous hire
+                                curl -s 'localhost:8080/api/demo/db/sql/lab?query=bogus'
+                                # → {"error":{"code":"validation_failed", …}} — unknown names never become SQL"""),
                         code("terminal:search", "bash",
                                 "search by meaning — stems versus substrings, plans beside both",
                                 null, """
-                                curl -s 'localhost:8080/api/demo/db/search?q=errors' | jq '{hits: [.hits[].title], likeCount}'
-                                # → ["One error envelope…", "The uniform interface…"] · likeCount: 0
+                                curl -s 'localhost:8080/api/demo/db/search?q=errors'
+                                # → hits[].title: "One error envelope…", "The uniform interface…" · likeCount 0
                                 #   stemming matched 'error' (title weight ranks first); the substring scan found nothing
-                                curl -s 'localhost:8080/api/demo/db/search?q=pagination' | jq '.ftsPlanIndexForced'
-                                # → ["Bitmap Heap Scan on posts …", "Bitmap Index Scan on posts_search_vector_idx …"]"""),
+                                curl -s 'localhost:8080/api/demo/db/search?q=pagination'
+                                # → the "ftsPlanIndexForced" lines: "Bitmap Heap Scan on posts …",
+                                #   and "Bitmap Index Scan on posts_search_vector_idx … — index-backed"""),
                         code("terminal:race", "bash",
                                 "the oversell race — three strategies, one scoreboard each",
                                 null, """
                                 for S in naive guarded atomic; do
                                   curl -s -X POST localhost:8080/api/demo/db/race/run \\
                                     -H 'content-type: application/json' \\
-                                    -d "{\\"strategy\\":\\"$S\\",\\"concurrency\\":4,\\"initialStock\\":1}" \\
-                                    | jq '{strategy, succeeded, oversold, finalStock, finalReserved}'
+                                    -d "{\\"strategy\\":\\"$S\\",\\"concurrency\\":4,\\"initialStock\\":1}"
                                 done
                                 # → naive:   {succeeded:4, oversold:true,  finalStock:0, finalReserved:4}
                                 #   guarded: {succeeded:1, oversold:false, finalStock:0, finalReserved:1}
@@ -524,15 +524,15 @@ public final class JdbcSqlTopic {
                                 POST=9f1c5a52-3d7e-4f8a-9b21-6c4d8e2a7f01
                                 curl -s -X POST localhost:8080/api/demo/db/audit/transfer \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\\"postId\\":\\"$POST\\",\\"title\\":\\"Renamed by curl\\",\\"changedBy\\":\\"terminal\\"}" | jq
+                                  -d "{\\"postId\\":\\"$POST\\",\\"title\\":\\"Renamed by curl\\",\\"changedBy\\":\\"terminal\\"}"
                                 # → committed:true · trailRowsAfter:1 — one commit, both facts
                                 curl -s -X POST localhost:8080/api/demo/db/audit/transfer \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\\"postId\\":\\"$POST\\",\\"title\\":\\"Never sticks\\",\\"failAfter\\":true}" | jq '{committed, titleAfter, trailRowsAfter}'
+                                  -d "{\\"postId\\":\\"$POST\\",\\"title\\":\\"Never sticks\\",\\"failAfter\\":true}"
                                 # → committed:false · titleAfter "Renamed by curl" · trailRowsAfter:1
                                 #   the crash rolled back BOTH writes; the ledger never heard a thing
-                                curl -s "localhost:8080/api/demo/db/audit/trail?entityId=$POST" | jq '.entries'
-                                # → one entry: actor "terminal", payload {action:"title-change", …}"""),
+                                curl -s "localhost:8080/api/demo/db/audit/trail?entityId=$POST"
+                                # → the "entries" array: one entry — actor "terminal", payload {action:"title-change", …}"""),
                         text("terminal:close", """
                                 The tour ends where the topic began: four layers down, every response above is JdbcTemplate handing SQL to PgJDBC over a pooled Hikari connection — the same plumbing the posts substrate has used all along, now with nothing between you and the query. The pieces live in domain/sqldemo (ports + use cases), data/sqldemo (six adapters, from the sandbox's restricted role to the race track's barrier), and db/migration V10–V12; topic 18 picks up exactly here, keeping this topic's port shape while letting an ORM implement it.""")));
     }

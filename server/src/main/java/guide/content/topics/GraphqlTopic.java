@@ -380,12 +380,12 @@ public final class GraphqlTopic {
                 section("terminal-companion", "The graph from a terminal",
                         "curl the /graphql endpoint with the preset documents — a page, the N+1 probe, a mutation, and a typed error.",
                         text("term:tour", """
-                                GraphQL is delightfully curl-able: one endpoint, POST, JSON in, JSON out — no special client, no headers beyond the content type. The tour below runs the same documents the playground presets carry (the catalog endpoint serves them as JSON if you want to script against it: curl -s localhost:8080/api/demo/graphql/queries | jq). Start the server (docker compose up — the dev profile also mounts /graphiql), then take the tour; note every failure arrives HTTP 200 with the taxonomy in extensions."""),
+                                GraphQL is delightfully curl-able: one endpoint, POST, JSON in, JSON out — no special client, no headers beyond the content type. The tour below runs the same documents the playground presets carry (the catalog endpoint serves them as JSON if you want to script against it: curl -s localhost:8080/api/demo/graphql/queries). Start the server (docker compose up — the dev profile also mounts /graphiql), then take the tour; note every failure arrives HTTP 200 with the taxonomy in extensions."""),
                         code("term:page", "bash", "one round trip, exactly the asked-for shape — pagination as fields", null, """
                                 # A page of posts: titles, statuses, versions — nothing else crosses the wire:
                                 curl -s -X POST localhost:8080/graphql \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"query":"query { posts(page: 0, size: 3) { totalElements totalPages items { title status version } } }"}' | jq
+                                  -d '{"query":"query { posts(page: 0, size: 3) { totalElements totalPages items { title status version } } }"}'
                                 # → {"data":{"posts":{"totalElements":12,"totalPages":4,
                                 #     "items":[{"title":"The uniform interface is the contract that scales",
                                 #                "status":"PUBLISHED","version":1}, …]}}}
@@ -394,16 +394,17 @@ public final class GraphqlTopic {
                                 curl -s -X POST localhost:8080/graphql \\
                                   -H 'Content-Type: application/json' \\
                                   -d '{"query":"query One($id: ID!) { post(id: $id) { title comments { author } } }",
-                                       "variables":{"id":"5b481618-f93a-4b46-572d-280949083b05"}}' | jq '.data.post.comments | length'
+                                       "variables":{"id":"5b481618-f93a-4b46-572d-280949083b05"}}' \\
+                                  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["data"]["post"]["comments"]))'
                                 # → 3"""),
                         code("term:n-plus-one", "bash", "the N+1 probe: six posts, each with comments — ONE batched repository call behind it", null, """
                                 # The query that would cost 7 calls with a naive resolver — served here by @BatchMapping:
                                 curl -s -X POST localhost:8080/graphql \\
                                   -H 'Content-Type: application/json' \\
                                   -d '{"query":"query { posts(page: 0, size: 6) { items { title comments { author body } } } }"}' \\
-                                  | jq '.data.posts.items | map({title, comments: (.comments | length)})'
-                                # → [{"title":"The uniform interface is the contract that scales","comments":3},
-                                #     {"title":"Nouns, not verbs: designing the resource first","comments":2}, …]
+                                  | python3 -c 'import json,sys; print([(i["title"], len(i["comments"])) for i in json.load(sys.stdin)["data"]["posts"]["items"]])'
+                                # → [('The uniform interface is the contract that scales', 3),
+                                #     ('Nouns, not verbs: designing the resource first', 2), …]
                                 # (the suite proves the counter: 1 batch call, 0 single lookups)"""),
                         code("term:mutation-and-error", "bash", "a mutation through the same draft rules as REST; then the always-200 typed error", null, """
                                 # Create — judged by PostDraft exactly as the REST POST body is:
@@ -412,15 +413,16 @@ public final class GraphqlTopic {
                                   -d '{"query":"mutation Create($input: PostInput!) { createPost(input: $input) { id title status version } }",
                                        "variables":{"input":{"title":"Hello from the terminal",
                                                              "body":"One door, two protocols.",
-                                                             "tags":["graphql"]}}}' | jq '.data.createPost'
-                                # → {"id":"<new-uuid>","title":"Hello from the terminal","status":"DRAFT","version":1}
+                                                             "tags":["graphql"]}}}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["createPost"])'
+                                # → {'id': '<new-uuid>', 'title': 'Hello from the terminal', 'status': 'DRAFT', 'version': 1}
                                 #   (status omitted in the input ⇒ DRAFT)
 
                                 # And the error demo: HTTP 200, taxonomy in extensions —
                                 curl -s -X POST localhost:8080/graphql \\
                                   -H 'Content-Type: application/json' \\
                                   -d '{"query":"query { post(id: \\"does-not-exist\\") { title } }"}' \\
-                                  | jq '{code: .errors[0].extensions.code, requestId: .errors[0].extensions.requestId, path: .errors[0].path}'
-                                # → {"code":"not_found","requestId":"<the filter's id>","path":["post"]}""")));
+                                  | python3 -c 'import json,sys; e=json.load(sys.stdin)["errors"][0]; print(e["extensions"]["code"], e["extensions"]["requestId"], e["path"])'
+                                # → not_found <the filter's id> ['post']""")));
     }
 }

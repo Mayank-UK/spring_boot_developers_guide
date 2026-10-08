@@ -428,37 +428,41 @@ public final class MongodbTopic {
                 section("terminal-companion", "Terminal companion",
                         "The whole topic through curl: record a visit, read the feed, ask the aggregates, explain the pipelines, flip the area live — with mongosh alongside.",
                         text("term:setup", """
-                                The server carries everything this topic taught, live. The tour speaks to a server on localhost:8080 (docker compose up also starts MongoDB — flip the area live on the last step to feel the difference; without it, the flip answers the honest hint and everything else still works). jq pretty-prints. mongosh users get the same facts natively — use guide, db.guide_visits.find().sort({occurredAt: -1}).limit(5), db.guide_visits.aggregate([{$group: {_id: "$topicId", visits: {$sum: 1}}}, {$sort: {visits: -1}}]) — but the curl tour works from anywhere the API does."""),
+                                The server carries everything this topic taught, live. The tour speaks to a server on localhost:8080 (docker compose up also starts MongoDB — flip the area live on the last step to feel the difference; without it, the flip answers the honest hint and everything else still works). Responses print raw and read fine. mongosh users get the same facts natively — use guide, db.guide_visits.find().sort({occurredAt: -1}).limit(5), db.guide_visits.aggregate([{$group: {_id: "$topicId", visits: {$sum: 1}}}, {$sort: {visits: -1}}]) — but the curl tour works from anywhere the API does."""),
                         code("term:record-recent", "bash",
                                 "record a visit, then read the newest feed", null, """
                                 # record one page view (visitorToken optional — only its sha-256 is stored)
                                 curl -s -X POST localhost:8080/api/demo/mongo/visits -H 'Content-Type: application/json' \\
-                                  -d '{"topicId":"mongodb","path":"/topics/mongodb","durationMs":91000,"locale":"en"}' | jq '.visit | {id, topicId, visitorHash}'
+                                  -d '{"topicId":"mongodb","path":"/topics/mongodb","durationMs":91000,"locale":"en"}'
+                                # → the "visit" object: id, topicId, visitorHash — 64 hex chars, never the token
 
                                 # the newest visits, newest first
-                                curl -s 'localhost:8080/api/demo/mongo/visits/recent?limit=3' | jq '.visits[] | {topicId, durationMs, locale}'
+                                curl -s 'localhost:8080/api/demo/mongo/visits/recent?limit=3'
+                                # → each "visits" entry: topicId, durationMs, locale
                                 """),
                         code("term:stats-explain", "bash",
                                 "the aggregates, then the pipelines that answer them", null, """
                                 # totals, top topics, average duration, locale histogram (fake mode answers from the seed)
-                                curl -s 'localhost:8080/api/demo/mongo/stats' | jq '{totalVisits, avgDurationMs, topTopics, localeHistogram}'
+                                curl -s 'localhost:8080/api/demo/mongo/stats'
 
                                 # narrow to one topic: topicVisits + avg describe that topic alone
-                                curl -s 'localhost:8080/api/demo/mongo/stats?topicId=jdbc-sql' | jq '{filteredByTopic, topicVisits, avgDurationMs}'
+                                curl -s 'localhost:8080/api/demo/mongo/stats?topicId=jdbc-sql'
 
                                 # the transparency artifact: the $group/$sort/$limit stages the live store would run
-                                curl -s localhost:8080/api/demo/mongo/explain | jq '.pipelines[] | {name, stages}'
+                                curl -s localhost:8080/api/demo/mongo/explain
+                                # → each "pipelines" entry: a name and its stages
                                 """),
                         code("term:mode", "bash",
                                 "flip the area live (or collect the honest hint when MongoDB is absent)", null, """
                                 # with docker compose up (MongoDB healthy): the flip activates lazily and reports the database
                                 curl -s -X POST localhost:8080/api/demo/mongo/mode -H 'Content-Type: application/json' \\
-                                  -d '{"dataMode":"live"}' | jq '{dataMode, database, hint}'
+                                  -d '{"dataMode":"live"}'
 
                                 # without MongoDB: same call, the area stays fake, the hint says why — nothing errors
                                 # back to the seeded console anytime
                                 curl -s -X POST localhost:8080/api/demo/mongo/mode -H 'Content-Type: application/json' \\
-                                  -d '{"dataMode":"fake"}' | jq '.dataMode'
+                                  -d '{"dataMode":"fake"}'
+                                # → "dataMode":"fake"
                                 """),
                         text("term:what-to-notice", """
                                 Three things to notice on the tour. The recorded visit's visitorHash is 64 hex characters — the token you sent never appears anywhere again, by design. The stats after a record change IMMEDIATELY (the fake's aggregates are computed over its window on every call), and after a live flip they RESET to the real collection's truth — two stores, never pretending to share data. And the flip-without-Mongo response is a 200 with a hint, while a normal endpoint hit while the area is live-and-down would serve the typed 503 envelope — two different honest answers for two different questions, which is the optional-service discipline in one round trip.""")));

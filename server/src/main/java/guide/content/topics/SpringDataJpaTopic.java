@@ -442,21 +442,20 @@ public final class SpringDataJpaTopic {
                                 "Activate the jpa area — the fake-mode envelope first, then the live flip",
                                 null, """
                                 # before activation: the typed envelope (503, code service_unavailable)
-                                curl -s localhost:8080/api/demo/jpa/probe?mode=n-plus-1 | jq .
+                                curl -s localhost:8080/api/demo/jpa/probe?mode=n-plus-1
 
                                 # the flip: the global live mode makes the 'jpa' area live
                                 curl -s -X PATCH localhost:8080/api/demo/scenario \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"dataMode":"live"}' | jq .
+                                  -d '{"dataMode":"live"}'
 
                                 # first live call pays migrate + seed once (idempotent), then measures
-                                curl -s 'localhost:8080/api/demo/jpa/probe?mode=n-plus-1&size=5' | jq ."""),
+                                curl -s 'localhost:8080/api/demo/jpa/probe?mode=n-plus-1&size=5'"""),
                         code("terminal:modes", "bash",
                                 "The four fetch shapes on the same five-post page",
                                 null, """
                                 for mode in n-plus-1 join-fetch entity-graph batch; do
-                                  curl -s "localhost:8080/api/demo/jpa/probe?mode=$mode&size=5" \\
-                                    | jq -r '"\\(.mode): \\(.queriesIssued) queries, \\(.entriesLoaded) rows — \\(.verdict)"'
+                                  curl -s "localhost:8080/api/demo/jpa/probe?mode=$mode&size=5"
                                 done
                                 # n-plus-1:     6 queries — the disease
                                 # join-fetch:   1 query  — cure one
@@ -466,24 +465,24 @@ public final class SpringDataJpaTopic {
                                 "The optimistic race — the story, then the real 409",
                                 null, """
                                 # the story as JSON: first writer won, stale writer rejected
-                                curl -s localhost:8080/api/demo/jpa/probe/locking | jq .
+                                curl -s localhost:8080/api/demo/jpa/probe/locking
 
                                 # the losing writer's outcome AS the error envelope
                                 curl -i 'localhost:8080/api/demo/jpa/probe/locking?surface=envelope' \\
                                   | head -1   # HTTP/1.1 409
-                                curl -s 'localhost:8080/api/demo/jpa/probe/locking?surface=envelope' \\
-                                  | jq '.error.code'   # conflict"""),
+                                curl -s 'localhost:8080/api/demo/jpa/probe/locking?surface=envelope'
+                                # → the envelope's "code" field: conflict"""),
                         code("terminal:pagination", "bash",
                                 "Page metadata, the count cost, both projections",
                                 null, """
-                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?page=0&size=10' | jq .
+                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?page=0&size=10'
                                 # totalElements: 12, totalPages: 2, queriesIssued: 2 (content + count)
 
-                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?status=draft' \\
-                                  | jq '.totalElements, .projection'   # 2, specification (...status=draft)
+                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?status=draft'
+                                # → totalElements 2 · "projection": "specification" (…status=draft)
 
-                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?projection=class&size=5' \\
-                                  | jq '.projection'   # class projection (constructor expression)"""),
+                                curl -s 'localhost:8080/api/demo/jpa/probe/pagination?projection=class&size=5'
+                                # → "projection": "class" (constructor expression)"""),
                         text("terminal:close", """
                                 What the curl tour proves, in one paragraph: the same page costs 6 queries one way and 1 another, measured rather than asserted; a stale writer gets the same 409 envelope this guide serves everywhere, translated from a Hibernate exception through one taxonomy; a Page costs two statements and says so; and none of it required the database to be up at boot. That is JPA used deliberately — mapping what exists, fetching what is asked, counting what matters, failing in the house dialect. The next topics step away from relational storage (MongoDB, Redis) carrying the same discipline: ports, DTO boundaries, honest measurements, a boot that never waits.""")));
     }

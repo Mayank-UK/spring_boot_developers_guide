@@ -277,13 +277,13 @@ public final class WebhooksTopic {
                 section("terminal-companion", "Terminal companion",
                         "The whole simulator driven by curl: subscribe, fire a happy event, then walk one all the way to the dead-letter queue — and replay a captured signature against a tight window.",
                         text("terminal:intro", """
-                                With the stack running (server on :8080), the tour below is the topic's proof of work — each response is JSON worth reading whole, and the attempt timeline tells the backoff story in timestamps. Replace SUB_ID with the id from the subscribe response (jq assumed; skip it and read raw)."""),
+                                With the stack running (server on :8080), the tour below is the topic's proof of work — each response is JSON worth reading whole, and the attempt timeline tells the backoff story in timestamps. Replace SUB_ID with the id from the subscribe response (read it straight from the raw JSON)."""),
                         code("terminal:subscribe", "bash",
                                 "subscribe — the default URL points at the in-app receiver; the secret is shown this once",
                                 null, """
                                 curl -s -X POST localhost:8080/api/demo/webhooks/subscriptions \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"secret":"whsec_terminal_tour_secret_01","eventTypes":["invoice.paid"]}' | jq
+                                  -d '{"secret":"whsec_terminal_tour_secret_01","eventTypes":["invoice.paid"]}'
                                 # → {"id":"sub_9f3…","urlDefaulted":true,"secret":"whsec_terminal_tour_secret_01", …}
                                 #   note the secret appears HERE and never again — listings show whsec_…01"""),
                         code("terminal:fire-happy", "bash",
@@ -292,24 +292,23 @@ public final class WebhooksTopic {
                                 SUB_ID=sub_9f3…   # from the subscribe response
                                 curl -s -X POST localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/fire \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"eventType":"invoice.paid","payload":{"amount":4200,"currency":"usd"}}' | jq
+                                  -d '{"eventType":"invoice.paid","payload":{"amount":4200,"currency":"usd"}}'
                                 sleep 2
-                                curl -s localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries | jq
+                                curl -s localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries
                                 # → state "delivered", one attempt: {n:1, outcome:"delivered", httpStatus:200}
-                                curl -s localhost:8080/api/demo/webhooks/receipts | jq
+                                curl -s localhost:8080/api/demo/webhooks/receipts
                                 # → the receiver's side: signature "verified", duplicate false"""),
                         code("terminal:fire-dlq", "bash",
                                 "force every attempt to fail — watch exponential backoff walk it to the DLQ",
                                 null, """
                                 curl -s -X POST localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/fire \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"eventType":"invoice.paid","payload":{},"respond":"500"}' | jq '.id'
-                                # poll the timeline — attempts land ~1s, 2s, 4s, 8s after each failure:
+                                  -d '{"eventType":"invoice.paid","payload":{},"respond":"500"}'
+                                # → the fire receipt: its "id" — poll the timeline; attempts land ~1s, 2s, 4s, 8s after each failure:
                                 for i in 1 2 3 4 5; do
                                   sleep 4
                                   curl -s --retry 3 --retry-delay 1 \\
-                                    localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries \\
-                                    | jq '.deliveries[0] | {state, attempts: [.attempts[] | {n, outcome, httpStatus}]}'
+                                    localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries
                                 done
                                 # → attempts 1..4 "failed" (httpStatus 500), then attempt 5 "dead-lettered"
                                 #   state "dead-lettered", nextAttemptAt gone — the DLQ row, ~15s after fire
@@ -320,19 +319,19 @@ public final class WebhooksTopic {
                                 null, """
                                 # grab the freshest attempt's signature + the exact envelope bytes it signed
                                 BODY=$(curl -s localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries \\
-                                  | jq -r '.deliveries[0].payload')
+                                  | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["deliveries"][0]["payload"]))')
                                 SIG=$(curl -s localhost:8080/api/demo/webhooks/subscriptions/$SUB_ID/deliveries \\
-                                  | jq -r '.deliveries[0].attempts[-1].signatureHeader')
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["deliveries"][0]["attempts"][-1]["signatureHeader"])')
                                 curl -s -X POST 'localhost:8080/api/demo/webhooks/receiver?toleranceSeconds=1' \\
                                   -H 'content-type: application/json' \\
                                   -H "X-SDG-Signature: $SIG" -H 'X-SDG-Event: invoice.paid' \\
-                                  -d "$BODY" | jq
+                                  -d "$BODY"
                                 # → 200: still inside the window — this IS why consumers dedupe by id
                                 sleep 2
                                 curl -s -X POST 'localhost:8080/api/demo/webhooks/receiver?toleranceSeconds=1' \\
                                   -H 'content-type: application/json' \\
                                   -H "X-SDG-Signature: $SIG" -H 'X-SDG-Event: invoice.paid' \\
-                                  -d "$BODY" | jq
+                                  -d "$BODY"
                                 # → 401 {"signature":"stale", … "replay window"} — the timestamp did its job"""),
                         text("terminal:close", """
                                 The tour ends where the topic began: a two-second-old signature verifies (and the receipts log flags the DUPLICATE — dedupe is the consumer's job even on the happy path), then the same bytes are refused as stale once the window closes — freshness and idempotency, two defenses at two ranges, both visible in one receipt log. That is the reversed API in miniature: everything you took for granted as a caller is now a design YOU ship. The pieces live in domain/webhooks (engine, signing, use cases) and data/webhooks (transport, store, ticker); the receipts endpoint is the audit log you did not know you needed until the retries started.""")));

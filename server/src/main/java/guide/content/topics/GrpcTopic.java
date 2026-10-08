@@ -335,7 +335,7 @@ public final class GrpcTopic {
                                 The gRPC wire itself is binary frames — curl cannot call GuideDemo directly the way it calls a REST route. But this app's console puts the rpcs behind ordinary JSON endpoints, so the terminal tour still drives everything real: introspect the service descriptor, invoke each interaction kind, ask for a topic that does not exist, and finally order 1200ms of work under a 300ms deadline and watch DEADLINE_EXCEEDED come back in ~300ms. Start the server (docker compose up, or run GuideApplication — the gRPC server mounts on 9090 inside the process), then take the tour. (When you want to speak native gRPC from a terminal: grpcurl -plaintext -d '{"topic_id":"grpc"}' localhost:9090 guide.demo.GuideDemo/GetTopicInfo — it works because the server starter registers gRPC's reflection service.)"""),
                         code("term:service-and-unary", "bash", "the contract as the descriptor sees it, then the unary kind against the real registry", null, """
                                 # Which rpcs exist, and which interaction kind each is:
-                                curl -s localhost:8080/api/demo/grpc/service | jq
+                                curl -s localhost:8080/api/demo/grpc/service
                                 # → {"serviceName":"guide.demo.GuideDemo","protoPackage":"guide.demo.GuideDemo",
                                 #     "methods":[{"name":"GetTopicInfo","kind":"unary",…},
                                 #                {"name":"StreamSectionTitles","kind":"server-streaming",…},
@@ -345,7 +345,7 @@ public final class GrpcTopic {
                                 # UNARY — one request, one answer from the real content registry:
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"method":"unary","topicId":"grpc"}' | jq
+                                  -d '{"method":"unary","topicId":"grpc"}'
                                 # → {"methodKind":"UNARY","roundTripMs":6,
                                 #     "results":[{"topicId":"grpc","title":"gRPC",
                                 #                 "group":"apis","sectionCount":8}],
@@ -354,34 +354,38 @@ public final class GrpcTopic {
                                 # SERVER STREAMING — the topic's eight sections, one message each:
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"method":"server-stream","topicId":"grpc"}' | jq '.results | length'
+                                  -d '{"method":"server-stream","topicId":"grpc"}' \\
+                                  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["results"]))'
                                 # → 8
 
                                 # CLIENT STREAMING — fetch the titles, stream them into AckSections:
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"method":"client-stream","topicId":"grpc"}' | jq '.results[0]'
-                                # → {"received":8,"acknowledged":8,
-                                #     "note":"client streamed 8 section title(s); server acked all"}
+                                  -d '{"method":"client-stream","topicId":"grpc"}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0])'
+                                # → {'received': 8, 'acknowledged': 8,
+                                #     'note': 'client streamed 8 section title(s); server acked all'}
 
                                 # BIDI — every title echoed with a server-side sequence number:
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"method":"bidi","topicId":"grpc"}' | jq '.results[0]'
-                                # → {"sender":"server","body":"echo: What gRPC is","sequence":1}"""),
+                                  -d '{"method":"bidi","topicId":"grpc"}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0])'
+                                # → {'sender': 'server', 'body': 'echo: What gRPC is', 'sequence': 1}"""),
                         code("term:not-found-and-deadline", "bash", "the error paths: an unknown topic is NOT_FOUND; a short deadline beats long work", null, """
                                 # Unknown topic — the gRPC Status rides the verdict (HTTP stays 200):
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
-                                  -d '{"method":"unary","topicId":"nope"}' | jq '{code:.statusCode,msg:.statusMessage}'
-                                # → {"code":"NOT_FOUND","msg":"no topic with id \\"nope\\" in the content registry"}
+                                  -d '{"method":"unary","topicId":"nope"}' \\
+                                  | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["statusCode"], "-", d["statusMessage"])'
+                                # → NOT_FOUND - no topic with id "nope" in the content registry
 
                                 # The deadline proof: order 1200ms of server work, arm a 300ms deadline —
                                 # the call gives up at ~300ms, never waits for the work to finish:
                                 curl -s -X POST localhost:8080/api/demo/grpc/invoke \\
                                   -H 'Content-Type: application/json' \\
                                   -d '{"method":"unary","topicId":"grpc","delayMs":1200,"deadlineMs":300}' \\
-                                  | jq '{code:.statusCode,roundTripMs}'
-                                # → {"code":"DEADLINE_EXCEEDED","roundTripMs":301}""")));
+                                  | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["statusCode"], d["roundTripMs"])'
+                                # → DEADLINE_EXCEEDED 301""")));
     }
 }

@@ -273,41 +273,41 @@ public final class InternationalizationTopic {
                 section("terminal-companion", "Terminal companion",
                         "The whole topic through curl: negotiate hostile headers, greet in all four locales, walk the fallback chain, and read the format matrix.",
                         text("term:setup", """
-                                The server carries everything this topic taught, live. The tour speaks to a server on localhost:8080; jq pretty-prints. The skill it drills is deliberate Accept-Language sending — the -H flag is your locale switch, and the four bundles answer it. Start well-formed, then get hostile and watch the parser skip the junk, then walk the greeting cases, then read the matrix:"""),
+                                The server carries everything this topic taught, live. The tour speaks to a server on localhost:8080; every response is small enough to read raw. The skill it drills is deliberate Accept-Language sending — the -H flag is your locale switch, and the four bundles answer it. Start well-formed, then get hostile and watch the parser skip the junk, then walk the greeting cases, then read the matrix:"""),
                         code("term:negotiate", "bash",
                                 "negotiate: a realistic header, then a hostile one", null, """
                                 # the two-pass trace: candidates, scores, winner, the resolver's verdict
-                                curl -s 'localhost:8080/api/demo/i18n/negotiate?header=de-DE,fr;q=0.8,en;q=0.5' | jq '{winner, kind, reason, resolverChose, resolverAgrees}'
+                                curl -s 'localhost:8080/api/demo/i18n/negotiate?header=de-DE,fr;q=0.8,en;q=0.5'
 
                                 # hostile: mixed case, a junk weight, an empty segment, an out-of-range q
-                                curl -s 'localhost:8080/api/demo/i18n/negotiate?header=EN-gb;q=1.0,zz-ZZ;q=OOPS,,fr;q=1.5' | jq '{candidates, skipped, winner, resolverChose}'
+                                curl -s 'localhost:8080/api/demo/i18n/negotiate?header=EN-gb;q=1.0,zz-ZZ;q=OOPS,,fr;q=1.5'
                                 """),
                         code("term:greeting", "bash",
                                 "greet in all four locales (the -H flag is the locale switch), then walk the chain", null, """
-                                # one parameterized message, four locales
-                                curl -s -H 'Accept-Language: de' 'localhost:8080/api/demo/i18n/greeting?name=Mak' | jq '.message'
-                                curl -s -H 'Accept-Language: fr' 'localhost:8080/api/demo/i18n/greeting?name=Mak' | jq '.message'
-                                curl -s -H 'Accept-Language: ja' 'localhost:8080/api/demo/i18n/greeting?name=Mak' | jq '{message, answeringBundle}'
+                                # one parameterized message, four locales — read each "message" field
+                                curl -s -H 'Accept-Language: de' 'localhost:8080/api/demo/i18n/greeting?name=Mak'
+                                curl -s -H 'Accept-Language: fr' 'localhost:8080/api/demo/i18n/greeting?name=Mak'
+                                curl -s -H 'Accept-Language: ja' 'localhost:8080/api/demo/i18n/greeting?name=Mak'
 
                                 # the fallback chain: this key exists only in the base bundle
-                                curl -s -H 'Accept-Language: de' 'localhost:8080/api/demo/i18n/greeting?useCase=fallback' | jq '{message, answeringBundle, chain}'
+                                curl -s -H 'Accept-Language: de' 'localhost:8080/api/demo/i18n/greeting?useCase=fallback'
 
                                 # the absent key: fail loud, and the note names the configured alternative
-                                curl -s -H 'Accept-Language: en' 'localhost:8080/api/demo/i18n/greeting?useCase=missing' | jq '{message, note}'
+                                curl -s -H 'Accept-Language: en' 'localhost:8080/api/demo/i18n/greeting?useCase=missing'
 
                                 # plurals through the French choice pattern (watch the apostrophe survive)
-                                curl -s -H 'Accept-Language: fr' 'localhost:8080/api/demo/i18n/greeting?useCase=plural&count=0' | jq '.message'
+                                curl -s -H 'Accept-Language: fr' 'localhost:8080/api/demo/i18n/greeting?useCase=plural&count=0'
                                 """),
                         code("term:format", "bash",
                                 "the locale format matrix and the two-zone contrast", null, """
                                 # dates, currency, decimals, compact — one fixed instant and number, four locales
-                                curl -s localhost:8080/api/demo/i18n/format | jq '.locales[] | {tag, date, currency, currencyCode, percent, compact}'
+                                curl -s localhost:8080/api/demo/i18n/format
 
                                 # same instant, same display locale, two zones — the independence proof
-                                curl -s localhost:8080/api/demo/i18n/format | jq '.zones'
+                                curl -s localhost:8080/api/demo/i18n/format
 
                                 # an unsupported locale lands on the default, by design
-                                curl -s -H 'Accept-Language: zh-CN' localhost:8080/api/demo/i18n/negotiate | jq '{winner, kind}'
+                                curl -s -H 'Accept-Language: zh-CN' localhost:8080/api/demo/i18n/negotiate
                                 """),
                         text("term:what-to-notice", """
                                 Four things to notice on the tour. The hostile negotiation returns 200 with three skipped segments and one surviving candidate — malformed input degrades the ANSWER, never the request itself. The German fallback greeting answers messages.properties with the chain printed — you can see de miss and the base hit. The missing case returns a body whose message field is absent but whose note names NoSuchMessageException and the use-code-as-default alternative — failure as documentation. And the format matrix's Japanese row shows 123.5万 and ¥1,234,568 — ten-thousands grouping and a currency with no minor unit, the two cells that convince any skeptic that locale data is real data.""")));

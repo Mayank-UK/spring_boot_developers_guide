@@ -76,6 +76,16 @@ public final class AsyncWorkBoard {
         return new ArrayList<>(tickets);
     }
 
+    /**
+     * Demo-console handle for the shared reset sweep: forget every ticket.
+     * A ticket still in flight when this lands later calls markRunning/
+     * markDone on an EMPTY board — {@link #replace} no-ops on unknown ids,
+     * so a mid-flight ticket cannot resurrect itself after the reset.
+     */
+    public synchronized void clear() {
+        tickets.clear();
+    }
+
     private void replace(String id, java.util.function.UnaryOperator<AsyncTicket> change) {
         java.util.List<AsyncTicket> next = new java.util.ArrayList<>();
         boolean replaced = false;

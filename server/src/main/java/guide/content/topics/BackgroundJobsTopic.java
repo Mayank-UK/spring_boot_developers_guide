@@ -335,7 +335,7 @@ public final class BackgroundJobsTopic {
 
                                 Name the pair once: depth is SUPPLY (work arriving faster than it completes), oldest-age is PROMISE DECAY (the queue's "soon" getting less true by the second). The observability topic (33) wires numbers into meters and alert rules; this topic established which two deserve the wiring.""")),
                 section("terminal-companion", "Terminal companion",
-                        "The whole queue driven by curl: a retried welcome mail, one dead letter and its replay, the heartbeat's evidence — no jq required, read the JSON raw.",
+                        "The whole queue driven by curl: a retried welcome mail, one dead letter and its replay, the heartbeat's evidence — plain curl, every response read raw.",
                         text("terminal:intro", """
                                 With the stack running (server on :8080), the tour walks every state machine in this topic. Each answer is JSON worth reading whole; the timestamps tell the backoff story. The deterministic injection (failAttempts) makes the tour reproducible — attempt counts and gaps below are not luck."""),
                         code("terminal:enqueue-retry", "bash",

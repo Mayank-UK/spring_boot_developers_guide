@@ -493,7 +493,7 @@ public final class AuthenticationTopic {
                                 "The refresh rotation console",
                                 "Issue a pair (a family is born); exchange the refresh token and watch the generation count tick while the presented token becomes spent; then run the theft: present the SPENT token again and watch the whole family die — revoked flag, and even the current token answers 401. The families view shows every lineage's timeline.")),
                 section("terminal-companion", "Terminal companion",
-                        "All six flows by curl: a login session, an API key's life, a JWT's death by expiry, the OAuth dance with PKCE, the hashing lab, and the reuse-revocation — jq assumed.",
+                        "All six flows by curl: a login session, an API key's life, a JWT's death by expiry, the OAuth dance with PKCE, the hashing lab, and the reuse-revocation — plain curl only: every response is small enough to read as printed.",
                         text("terminal:intro", """
                                 With the stack running (server on :8080), the tour walks every mechanism in this topic end to end. Three seeded users: alice/alice-demo-pass-01 (admin+staff), bob/bob-demo-pass-01 (staff), carol/carol-demo-pass-01 (reader) — dev fixtures, openly documented on purpose (the hashing section explains why that openness is itself a decision you make consciously in dev and never in prod)."""),
                         code("terminal:sessions", "bash",
@@ -502,13 +502,13 @@ public final class AuthenticationTopic {
                                 # login — the cookie jar plays the browser
                                 curl -s -c /tmp/sdg.jar -X POST localhost:8080/api/demo/auth/session/login \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"alice","password":"alice-demo-pass-01"}' | jq
+                                  -d '{"username":"alice","password":"alice-demo-pass-01"}'
                                 # → {"user":{"username":"alice","roles":["admin","staff"]},
                                 #     "session":{"cookie":{"httpOnly":true,"sameSite":"lax", …}},
                                 #     "via":"session"}
-                                curl -s -b /tmp/sdg.jar localhost:8080/api/demo/auth/session/me | jq '.user.username'
-                                # → "alice"
-                                curl -s -b /tmp/sdg.jar -X POST localhost:8080/api/demo/auth/session/logout | jq
+                                curl -s -b /tmp/sdg.jar localhost:8080/api/demo/auth/session/me
+                                # → the "user" object: {"username":"alice", …}
+                                curl -s -b /tmp/sdg.jar -X POST localhost:8080/api/demo/auth/session/logout
                                 curl -s -o /dev/null -w '%{http_code}\\n' -b /tmp/sdg.jar \\
                                   localhost:8080/api/demo/auth/session/me
                                 # → 401 — the session is gone; wrong password? same 401 shape, no oracle"""),
@@ -517,14 +517,16 @@ public final class AuthenticationTopic {
                                 null, """
                                 KEY=$(curl -s -X POST localhost:8080/api/demo/auth/apikeys \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"bob","password":"bob-demo-pass-01"}' | jq -r '.apiKey')
+                                  -d '{"username":"bob","password":"bob-demo-pass-01"}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["apiKey"])')
                                 # → sdg_key_… (43 chars — the ONE response that ever shows it)
-                                curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys/whoami | jq
+                                curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys/whoami
                                 # → {"user":{"username":"bob","roles":["staff"]},"via":"api-key"}
-                                curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys | jq '.keys[0]'
-                                # → {"redacted":"sdg_key_9f3…", …} — prefixes only, never key material
-                                KEY_ID=$(curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys | jq -r '.keys[0].id')
-                                curl -s -X DELETE -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys/$KEY_ID | jq
+                                curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys
+                                # → {"keys":[{"redacted":"sdg_key_9f3…", …}]} — prefixes only, never key material
+                                KEY_ID=$(curl -s -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["keys"][0]["id"])')
+                                curl -s -X DELETE -H "X-API-Key: $KEY" localhost:8080/api/demo/auth/apikeys/$KEY_ID
                                 curl -s -o /dev/null -w '%{http_code}\\n' -H "X-API-Key: $KEY" \\
                                   localhost:8080/api/demo/auth/apikeys/whoami
                                 # → 401 — revoked keys are dead keys"""),
@@ -533,17 +535,19 @@ public final class AuthenticationTopic {
                                 null, """
                                 TOKEN=$(curl -s -X POST localhost:8080/api/demo/auth/jwt/token \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"carol","password":"carol-demo-pass-01"}' | jq -r '.accessToken')
+                                  -d '{"username":"carol","password":"carol-demo-pass-01"}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])')
                                 curl -s -H "Authorization: Bearer $TOKEN" \\
-                                  localhost:8080/api/demo/auth/jwt/protected | jq '{sub, roles, via}'
-                                # → {"sub":"carol","roles":["reader"],"via":"jwt"} — claims are TRUSTED here
+                                  localhost:8080/api/demo/auth/jwt/protected
+                                # → {"sub":"carol","roles":["reader"],"via":"jwt", …} — claims are TRUSTED here
                                 TAMPERED="${TOKEN%?}A"   # flip the signature's last character
                                 curl -s -i -H "Authorization: Bearer $TAMPERED" \\
                                   localhost:8080/api/demo/auth/jwt/protected | grep -i www-authenticate
                                 # → WWW-Authenticate: Bearer error="invalid_token" — the signature caught it
                                 SHORT=$(curl -s -X POST localhost:8080/api/demo/auth/jwt/token \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"carol","password":"carol-demo-pass-01","ttlSeconds":1}' | jq -r '.accessToken')
+                                  -d '{"username":"carol","password":"carol-demo-pass-01","ttlSeconds":1}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])')
                                 sleep 2 && curl -s -o /dev/null -w '%{http_code}\\n' \\
                                   -H "Authorization: Bearer $SHORT" localhost:8080/api/demo/auth/jwt/protected
                                 # → 401 — expiry, on schedule"""),
@@ -560,50 +564,53 @@ public final class AuthenticationTopic {
                                        \\"codeChallengeMethod\\":\\"S256\\",
                                        \\"username\\":\\"alice\\",\\"password\\":\\"alice-demo-pass-01\\",
                                        \\"consent\\":true}")
-                                echo "$RESP" | jq '{redirectTo, state}'   # the client checks the state echo
-                                CODE=$(echo "$RESP" | jq -r '.code')
+                                echo "$RESP"   # the client checks the state echo in the raw body
+                                CODE=$(echo "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
                                 curl -s -X POST localhost:8080/api/demo/auth/oauth/token \\
                                   -H 'content-type: application/json' \\
                                   -d "{\"grantType\":\"authorization_code\",\"code\":\"$CODE\",
                                        \\"redirectUri\\":\\"http://localhost:5176/oauth/callback\\",
-                                       \\"clientId\\":\\"sdg-console\\",\\"codeVerifier\\":\\"$VERIFIER\\"}" | jq '{grant, familyId}'
+                                       \\"clientId\\":\\"sdg-console\\",\\"codeVerifier\\":\\"$VERIFIER\\"}"
                                 # → {"grant":"authorization_code", …} — and re-running it: 401, codes are single-use"""),
                         code("terminal:hashing", "bash",
                                 "the lab: cost, salt, and the timing evidence",
                                 null, """
                                 HASH=$(curl -s -X POST localhost:8080/api/demo/auth/hashing/hash \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"password":"correct horse","cost":10}' | jq -r '.hash')
-                                curl -s "localhost:8080/api/demo/auth/hashing/compare?hash=$HASH" | jq '{version, cost, salt}'
-                                # → {"version":"2a","cost":10,"salt":"22 chars, unique every time"}
+                                  -d '{"password":"correct horse","cost":10}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["hash"])')
+                                curl -s "localhost:8080/api/demo/auth/hashing/compare?hash=$HASH"
+                                # → {"version":"2a","cost":10,"salt":"22 chars, unique every time", …}
                                 curl -s -X POST localhost:8080/api/demo/auth/hashing/verify \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\"password\":\"correct horse\",\"hash\":\"$HASH\"}" | jq
+                                  -d "{\"password\":\"correct horse\",\"hash\":\"$HASH\"}"
                                 # → {"matches":true, "elapsedMs":62.1}
                                 curl -s -X POST localhost:8080/api/demo/auth/hashing/verify \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\"password\":\"correct horses\",\"hash\":\"$HASH\"}" | jq
+                                  -d "{\"password\":\"correct horses\",\"hash\":\"$HASH\"}"
                                 # → {"matches":false,"elapsedMs":61.8} — wrong costs the SAME: no timing oracle"""),
                         code("terminal:refresh", "bash",
                                 "the theft story: issue, rotate, replay the spent token, watch the family die",
                                 null, """
                                 RT=$(curl -s -X POST localhost:8080/api/demo/auth/refresh/issue \\
                                   -H 'content-type: application/json' \\
-                                  -d '{"username":"alice","password":"alice-demo-pass-01"}' | jq -r '.refreshToken')
+                                  -d '{"username":"alice","password":"alice-demo-pass-01"}' \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["refreshToken"])')
                                 NEW=$(curl -s -X POST localhost:8080/api/demo/auth/refresh/exchange \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\"refreshToken\":\"$RT\"}" | jq -r '.refreshToken')
+                                  -d "{\"refreshToken\":\"$RT\"}" \\
+                                  | python3 -c 'import json,sys; print(json.load(sys.stdin)["refreshToken"])')
                                 # the replay — the SPENT token again:
                                 curl -s -X POST localhost:8080/api/demo/auth/refresh/exchange \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\"refreshToken\":\"$RT\"}" | jq '.error.message'
-                                # → "refresh token reuse detected — family revoked (possible theft)"
+                                  -d "{\"refreshToken\":\"$RT\"}"
+                                # → {"error":{"code":"…","message":"refresh token reuse detected — family revoked (possible theft)", …}}
                                 curl -s -X POST localhost:8080/api/demo/auth/refresh/exchange \\
                                   -H 'content-type: application/json' \\
-                                  -d "{\"refreshToken\":\"$NEW\"}" | jq '.error.message'
-                                # → "refresh family is revoked" — even the CURRENT token dies with the lineage
-                                curl -s localhost:8080/api/demo/auth/refresh/families | jq '.families[-1] | {revoked, generations}'
-                                # → {"revoked":true, …} — the observability view"""),
+                                  -d "{\"refreshToken\":\"$NEW\"}"
+                                # → …"message":"refresh family is revoked" — even the CURRENT token dies with the lineage
+                                curl -s localhost:8080/api/demo/auth/refresh/families
+                                # → the LAST family in the list: "revoked":true — the observability view"""),
                         text("terminal:close", """
                                 Six curls later you have exercised every mechanism the topic built: a session born and killed by its cookie, a key issued once and revoked, a token verified-tampered-expired, a dance completed with state and PKCE intact, a hash whose wrong answers cost the same as right ones, and a family revoked by its own replay. The machinery lives in domain/auth (use cases, tokens, minter), data/auth (three in-memory stores), presentation/security (the key filter, the session glue), and config/ (the baseline chain). Topic 24 asks the next question on the same substrate — authenticated as alice, WHAT MAY SHE DO — and answers it with roles, permissions, and method security.""")));
     }

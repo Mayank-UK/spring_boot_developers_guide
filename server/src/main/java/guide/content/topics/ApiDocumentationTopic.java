@@ -252,37 +252,39 @@ public final class ApiDocumentationTopic {
                         text("rest:style-guides", """
                                 One layer above the machine contract belongs to people: the API STYLE GUIDE — a written set of conventions (collections are plural, errors use one envelope, pagination is cursor-or-offset but ONE of them, dates are RFC 3339) enforced by LINTERS over the machine document rather than by code review arguments. Spectral rulesets and the public guides from Google and Zalando are the references worth stealing from; the value is not any single rule but the property a guide shares with everything else in this topic — it moves API quality from tribal memory into an artifact the build can check. A new engineer joins, reads the guide, and writes endpoints that look like the rest on day one; CI reads the ruleset and rejects the ones that do not. Documentation, at every altitude this topic visited, is the same idea: what the API does, written down somewhere the drift can be caught.""")),
                 section("terminal-companion", "The spec from a terminal",
-                        "curl and jq: count the contract, extract a schema, diff a snapshot against the live document, open /docs.",
+                        "curl and python3: count the contract, extract a schema, diff a snapshot against the live document, open /docs.",
                         text("term:tour", """
-                                The document is JSON, and jq makes it queryable — the fastest documentation review there is. The tours below read the same /v3/api-docs the drift test reads; run them against a live server (docker compose up, or GuideApplication). The last one is the manual version of the drift test: save a snapshot, and later diff the normalized live document against it — any contract change shows up as a diff you can read in seconds, which is also exactly how you would review a proposed API change in a pull request."""),
+                                The document is JSON, and python3 — on virtually every dev box — makes it queryable with one-liners: the fastest documentation review there is. The tours below read the same /v3/api-docs the drift test reads; run them against a live server (docker compose up, or GuideApplication). The last one is the manual version of the drift test: save a snapshot, and later diff the normalized live document against it — any contract change shows up as a diff you can read in seconds, which is also exactly how you would review a proposed API change in a pull request."""),
                         code("term:count", "bash", "the contract, counted — paths, operations, schemas", null, """
                                 # The whole surface in one number, then grouped by what owns it:
-                                curl -s localhost:8080/v3/api-docs | jq '.paths | length'
-
-                                # Every operation, as path + method pairs:
                                 curl -s localhost:8080/v3/api-docs \\
-                                  | jq -r '.paths | to_entries[] | .key as $p | .value
-                                      | keys[] | select(. != "parameters") | "\\(.|ascii_upcase) \\($p)"' | head
+                                  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["paths"]))'
+
+                                # Every operation, as METHOD + path pairs:
+                                curl -s localhost:8080/v3/api-docs \\
+                                  | python3 -c 'import json,sys; d=json.load(sys.stdin)["paths"]; print("\\n".join(f"{m.upper()} {p}" for p,ops in d.items() for m in ops if m != "parameters"))' | head
 
                                 # The server's own coverage report (the demo endpoint's numbers):
-                                curl -s localhost:8080/api/demo/api-docs/coverage | jq '{paths, operations, schemas, specVersion}'
+                                curl -s localhost:8080/api/demo/api-docs/coverage
                                 # → {"paths":…,"operations":…,"schemas":…,"specVersion":"3.1.0"}"""),
                         code("term:extract", "bash", "one schema, extracted — the resource's contract as JSON", null, """
                                 # The Post schema exactly as generators receive it:
-                                curl -s localhost:8080/v3/api-docs | jq '.components.schemas.Post'
+                                curl -s localhost:8080/v3/api-docs \\
+                                  | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["components"]["schemas"]["Post"], indent=2))'
 
                                 # Which paths reference it (the $ref web, walked backwards):
                                 curl -s localhost:8080/v3/api-docs \\
-                                  | jq -r '[.paths | to_entries[] | select(.value | tostring | contains("Post")) | .key][]'
+                                  | python3 -c 'import json,sys; d=json.load(sys.stdin); print([p for p,ops in d["paths"].items() if "Post" in json.dumps(ops)])'
 
                                 # The interactive front door — open it in a browser:
                                 open http://localhost:8080/docs"""),
                         code("term:drift", "bash", "the manual drift alarm: snapshot once, diff forever", null, """
                                 # Pin today's contract (normalized: key order cannot fake a change):
-                                curl -s localhost:8080/v3/api-docs | jq -S . > /tmp/api-spec-pinned.json
+                                curl -s localhost:8080/v3/api-docs | python3 -m json.tool --sort-keys > /tmp/api-spec-pinned.json
 
                                 # Later — after your change, or on another build — the one-line review:
-                                diff <(jq -S . /tmp/api-spec-pinned.json) <(curl -s localhost:8080/v3/api-docs | jq -S .)
+                                diff <(python3 -m json.tool --sort-keys /tmp/api-spec-pinned.json) \\
+                                     <(curl -s localhost:8080/v3/api-docs | python3 -m json.tool --sort-keys)
                                 # → silence means the contract held; any hunk is a change your consumers must approve""")));
     }
 }
