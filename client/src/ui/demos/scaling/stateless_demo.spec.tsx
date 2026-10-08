@@ -100,7 +100,14 @@ describe('StatelessDemo', () => {
 
     fireEvent.click(screen.getByTestId('scaling-send'));
 
-    const panel = await screen.findByTestId('scaling-report');
+    // settled state first: the report panel testid exists from the idle
+    // paint ("not run yet"), so waiting on the element alone can resolve
+    // before the fetch paints under load — wait for the fetched identity.
+    await waitFor(() => {
+      expect(screen.getByTestId('scaling-report')).toHaveTextContent('41782@macbook.local');
+    });
+
+    const panel = screen.getByTestId('scaling-report');
     expect(panel).toHaveTextContent('41782@macbook.local');
     const instances = screen.getAllByTestId('scaling-instance');
     expect(instances).toHaveLength(2);
@@ -138,7 +145,14 @@ describe('StatelessDemo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'b' }));
     fireEvent.click(screen.getByTestId('scaling-send'));
 
-    const panel = await screen.findByTestId('scaling-report');
+    // settled state first: the report panel testid exists from the idle
+    // paint ("not run yet"), so waiting on the element alone can beat the
+    // fetch under load — wait for the fetched numbers before asserting.
+    await waitFor(() => {
+      expect(screen.getByTestId('scaling-report')).toHaveTextContent('own memory: 3 request(s)');
+    });
+
+    const panel = screen.getByTestId('scaling-report');
     expect(panel).toHaveTextContent('own memory: 3 request(s)');
     expect(screen.getByTestId('scaling-last')).toHaveTextContent('routed to server-b (sticky)');
     expect(screen.getByTestId('scaling-last')).toHaveTextContent(
@@ -204,7 +218,14 @@ describe('StatelessDemo', () => {
     call = 1;
     fireEvent.click(screen.getByTestId('scaling-reset'));
 
-    const panel = await screen.findByTestId('scaling-report');
+    // settled state first: the pre-reset panel still shows the first
+    // answer ("shared store: 3") while the reset request is in flight —
+    // wait for the rewound answer to paint before asserting.
+    await waitFor(() => {
+      expect(screen.getByTestId('scaling-report')).toHaveTextContent('shared store: 0');
+    });
+
+    const panel = screen.getByTestId('scaling-report');
     expect(panel).toHaveTextContent('shared store: 0');
     expect(panel).toHaveTextContent('own memory: 0 request(s)');
     // routedTo null — the "this request" line is absent after a reset

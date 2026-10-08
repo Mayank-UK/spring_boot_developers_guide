@@ -85,10 +85,19 @@ class JwtDemoTest {
     @Test
     void aTamperedTokenIsRejectedByTheSignatureCheck() throws Exception {
         String token = mintFor("alice", "alice-demo-pass-01", null);
-        // forge: flip the last character of the signature segment
-        char last = token.charAt(token.length() - 1);
-        char forged = last == 'A' ? 'B' : 'A';
-        String tampered = token.substring(0, token.length() - 1) + forged;
+        // forge: flip one character in the MIDDLE of the payload segment. The
+        // signature covers header + payload, so ANY payload byte change trips
+        // the signature check — and a middle base64 char is fully significant
+        // (only a segment's final char may carry ignored padding bits), so a
+        // distinct char ALWAYS changes the decoded bytes. Flipping the
+        // signature's own LAST char was a 1-in-16 coin flip: its low bits can
+        // be ignored padding, decoding to the very same signature.
+        String[] parts = token.split("\\.");
+        int flipAt = parts[1].length() / 2;
+        char original = parts[1].charAt(flipAt);
+        char forged = original == 'A' ? 'B' : 'A';
+        parts[1] = parts[1].substring(0, flipAt) + forged + parts[1].substring(flipAt + 1);
+        String tampered = String.join(".", parts);
         mockMvc.perform(get(PROTECTED).header("Authorization", "Bearer " + tampered))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("WWW-Authenticate", org.hamcrest.Matchers

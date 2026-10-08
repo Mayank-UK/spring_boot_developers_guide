@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  * The snapshot contract: the resource exists on the classpath, parses into
  * the summarized shape, and its self-declared numbers match what the parse
  * found (a meta/tree mismatch throws — a snapshot that lies about itself is
- * worse than no snapshot). Also pins the two mediation specimens the topic
+ * worse than no snapshot). Also pins the three mediation specimens the topic
  * teaches from, so an unconscious regeneration that DROPS the conflicts
  * section fails here instead of silently degrading the lesson.
  */
@@ -25,11 +25,11 @@ class ClasspathDependencyTreeSnapshotTest {
     void snapshotResourceIsPresentAndParseable() {
         DependencyTreeSnapshot snapshot = source.load();
 
-        assertEquals("2026-10-07", snapshot.capturedOn());
+        assertEquals("2026-10-08", snapshot.capturedOn());
         assertEquals("spring-boot-starter-parent 4.1.1", snapshot.parentBom());
         assertEquals("spring-grpc-dependencies 1.0.3", snapshot.importedBom());
-        assertEquals(31, snapshot.directCount());
-        assertEquals(31, snapshot.direct().size());
+        assertEquals(40, snapshot.directCount());
+        assertEquals(40, snapshot.direct().size());
     }
 
     @Test
@@ -63,6 +63,9 @@ class ClasspathDependencyTreeSnapshotTest {
         assertTrue(guava.contains("33.4.8-android") && guava.contains("NEAREST WINS"));
         assertTrue(snapshot.conflicts().stream().anyMatch(line -> line.contains("1.16.7")),
                 "the BOM-override specimen (micrometer) stays in the lesson");
+        assertTrue(snapshot.conflicts().stream()
+                        .anyMatch(line -> line.contains("error_prone_annotations") && line.contains("2.41.0")),
+                "the upper-bound-pin specimen (error_prone, the enforcer story) stays in the lesson");
     }
 
     private Optional<DependencyTreeSnapshot.DirectDependency> find(DependencyTreeSnapshot snapshot,

@@ -22,5 +22,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Fork concurrency is capped via the npm test script flag
+    // (--pool.forks.maxForks=4), not here: the container sees 8 CPUs but
+    // shares the Docker VM with everything else Docker runs, and 8
+    // simultaneous jsdom forks then lose the race against the pool's
+    // worker-response timeout ("Failed to start forks worker" — seen 3×
+    // under load). The flag lives in package.json because this vitest's
+    // InlineConfig type rejects poolOptions (tsc -b guards the build).
   },
 });

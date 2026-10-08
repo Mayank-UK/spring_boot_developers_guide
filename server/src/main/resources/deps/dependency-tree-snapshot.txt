@@ -4,14 +4,14 @@
 #   maven:3.9-eclipse-temurin-25 mvn -B dependency:tree
 # Live maven at request time is deliberately NOT run (too slow, mutates target/) —
 # topic 31 explains the trade-off and this file is the drift-checked stand-in.
-# Curation: ALL 31 direct dependencies + every second-level child; nothing deeper
+# Curation: ALL 40 direct dependencies + every second-level child; nothing deeper
 # (the manifest endpoint carries the key deep artifacts at runtime instead).
 [meta]
-captured: 2026-10-07
+captured: 2026-10-08
 tool: maven:3.9-eclipse-temurin-25, dependency:tree (maven-dependency-plugin 3.10.0)
 parent-bom: spring-boot-starter-parent 4.1.1
 imported-bom: spring-grpc-dependencies 1.0.3
-direct-count: 31
+direct-count: 40
 [tree]
 guide:server:jar:0.0.1-SNAPSHOT
 +- org.springframework.boot:spring-boot-starter-web:jar:4.1.1:compile
@@ -99,7 +99,7 @@ guide:server:jar:0.0.1-SNAPSHOT
 |  \- io.grpc:grpc-protobuf-lite:jar:1.77.1:runtime
 +- io.grpc:grpc-stub:jar:1.77.1:compile
 |  +- org.codehaus.mojo:animal-sniffer-annotations:jar:1.24:compile
-|  \- com.google.errorprone:error_prone_annotations:jar:2.36.0:compile
+|  \- com.google.errorprone:error_prone_annotations:jar:2.41.0:compile
 +- org.springframework.boot:spring-boot-starter-security:jar:4.1.1:compile
 |  \- org.springframework.boot:spring-boot-security:jar:4.1.1:compile
 +- org.springframework.boot:spring-boot-starter-oauth2-resource-server:jar:4.1.1:compile
@@ -111,9 +111,37 @@ guide:server:jar:0.0.1-SNAPSHOT
 +- org.springframework.boot:spring-boot-starter-websocket:jar:4.1.1:compile
 |  +- org.springframework.boot:spring-boot-starter-webmvc:jar:4.1.1:compile
 |  \- org.springframework.boot:spring-boot-websocket:jar:4.1.1:compile
-\- net.coobird:thumbnailator:jar:0.4.21:compile
++- net.coobird:thumbnailator:jar:0.4.21:compile
++- net.logstash.logback:logstash-logback-encoder:jar:9.0:compile
++- io.micrometer:micrometer-tracing-bridge-brave:jar:1.7.1:compile
+|  +- org.jspecify:jspecify:jar:1.0.1:compile
+|  +- io.micrometer:micrometer-tracing:jar:1.7.1:compile
+|  +- org.slf4j:slf4j-api:jar:2.0.18:compile
+|  +- io.zipkin.brave:brave:jar:6.3.1:compile
+|  +- io.zipkin.brave:brave-instrumentation-http:jar:6.3.1:compile
+|  +- io.zipkin.aws:brave-propagation-aws:jar:1.4.0:compile
+|  \- io.zipkin.contrib.brave-propagation-w3c:brave-propagation-tracecontext:jar:0.2.0:compile
++- org.springframework.boot:spring-boot-micrometer-tracing-brave:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-micrometer-observation:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-micrometer-tracing:jar:4.1.1:compile
++- io.micrometer:micrometer-registry-prometheus:jar:1.17.1:compile
+|  +- io.micrometer:micrometer-core:jar:1.17.1:compile
+|  +- io.prometheus:prometheus-metrics-core:jar:1.7.0:compile
+|  +- io.prometheus:prometheus-metrics-tracer-common:jar:1.7.0:compile
+|  \- io.prometheus:prometheus-metrics-exposition-formats:jar:1.7.0:runtime
++- org.springframework.boot:spring-boot-starter-restclient:jar:4.1.1:compile
+|  \- org.springframework.boot:spring-boot-restclient:jar:4.1.1:compile
++- io.zipkin.brave:brave-context-slf4j:jar:6.3.1:compile
++- io.github.resilience4j:resilience4j-spring-boot3:jar:2.3.0:compile
+|  +- io.github.resilience4j:resilience4j-spring6:jar:2.3.0:compile
+|  \- io.github.resilience4j:resilience4j-micrometer:jar:2.3.0:compile
++- org.springframework.boot:spring-boot-starter-webclient:jar:4.1.1:compile
+|  +- org.springframework.boot:spring-boot-webclient:jar:4.1.1:compile
+|  \- io.projectreactor.netty:reactor-netty-http:jar:1.3.7:compile
+\- org.springframework.boot:spring-boot-starter-mail:jar:4.1.1:compile
+   \- org.springframework.boot:spring-boot-mail:jar:4.1.1:compile
 [conflicts]
 # As reported by `mvn dependency:tree -Dverbose` (kept verbatim, context added):
-com.google.guava:guava:33.4.8-jre:runtime omitted for conflict with 33.4.8-android — the -jre flavor was asked by io.grpc:grpc-services -> com.google.protobuf:protobuf-java-util (depth 3); the -android flavor is declared by io.grpc:grpc-protobuf (depth 2) — NEAREST WINS.
-com.google.errorprone:error_prone_annotations:2.18.0:runtime omitted for conflict with 2.36.0 — one branch's older request lost; a third branch asked 2.41.0 and ALSO lost to 2.36.0 — mediation picks one, not the newest.
+com.google.guava:guava:33.4.8-jre:runtime omitted for conflict with 33.4.8-android — the -jre flavor is asked directly by io.grpc:grpc-services (depth 3, under grpc-netty); the -android flavor is declared nearer by io.grpc:grpc-protobuf's branch — NEAREST WINS. Same 33.4.8 line in two flavors: requireUpperBoundDeps reads the pair as a downgrade, so the pom excludes guava with exactly that reason recorded.
+com.google.errorprone:error_prone_annotations:2.41.0 — version managed from 2.36.0 (grpc-stub, nearest) and 2.18.0 (protobuf-java-util): plain mediation had kept grpc-stub's NEARER 2.36.0 while gson (riding grpc-services) asked 2.41.0 — the exact older-version-wins trap the enforcer's requireUpperBoundDeps rule exists to catch, and its first run in this repo flagged it; the dependencyManagement upper-bound pin (2.41.0, an annotations-only jar) is the fix the rule demanded.
 io.micrometer:micrometer-observation:1.17.1 — version managed from 1.16.7: spring-web requested 1.16.7, the Boot BOM's dependencyManagement forces 1.17.1 — the BOM beats every transitive request.

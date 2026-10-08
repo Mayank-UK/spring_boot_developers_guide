@@ -31,6 +31,15 @@
     <!-- Topic 15 (grpc): one BOM aligns spring-grpc (1.0.3, built against
          Spring Boot 4) with the grpc-java and protobuf versions it was tested
          with — the four grpc artifacts below declare no versions on purpose. -->
+    <!-- Topic 31 (dependency-management) — THE UPPER-BOUND PIN, added the day
+         requireUpperBoundDeps first ran: mediation had resolved
+         error_prone_annotations 2.36.0 (grpc-stub's request, nearest) while
+         gson — riding grpc-services — asked 2.41.0. An annotations-only jar
+         carries no runtime behavior, so aligning to the upper bound is the
+         safe, honest fix (the excluded alternatives live in the enforcer
+         block below). NOT a flagged pin: nothing outside this pom depends on
+         the number, and dependencyManagement entries are drift-guarded by
+         the enforcer rule itself, not the FlaggedDecisions registry. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -39,6 +48,11 @@
                 <version>${spring-grpc.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>2.41.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -497,6 +511,57 @@
                         <goals>
                             <goal>generate</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Topic 31 (dependency-management): the enforcer, at last. The
+                 requireUpperBoundDeps rule FAILS the build whenever
+                 nearest-wins mediation keeps an OLDER version than some branch
+                 of the graph requested. Its first run here fired six times:
+                 ONE was resolved for real (the error_prone upper-bound pin in
+                 dependencyManagement above); the other five are the two
+                 deliberate exclusion families recorded below. It binds to
+                 the validate phase, so every mvn run in CI polices the tree
+                 mechanically. Versionless: the Boot parent's pluginManagement
+                 pins the plugin (3.6.3). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-upper-bound-deps</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireUpperBoundDeps>
+                                    <excludes>
+                                        <!-- EXCLUSION FAMILY 1 — the BOM-owned Jackson 2 line.
+                                             springdoc/swagger-core asks jackson 2.22.1, but the
+                                             Boot 4.1.1 BOM deliberately manages the whole Jackson
+                                             2 family at 2.21.5 (the compatibility-tested set this
+                                             app pairs with its Jackson 3 core). dependencyManagement
+                                             beating a transitive request is the BOM working AS
+                                             DESIGNED — overriding it here to satisfy the rule would
+                                             fight the parent, so these four stay excluded with the
+                                             reason recorded. -->
+                                        <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
+                                        <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                        <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
+                                        <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
+                                        <!-- EXCLUSION FAMILY 2 — the guava classifier pair. The rule
+                                             compares 33.4.8-android as OLDER than 33.4.8-jre, but
+                                             they are the SAME 33.4.8 line in two flavors, and
+                                             grpc-java deliberately requests the -android flavor from
+                                             grpc-protobuf while grpc-services pulls -jre transitively.
+                                             A classifier difference is not a version downgrade —
+                                             excluded until grpc's own BOM converges the flavors. -->
+                                        <exclude>com.google.guava:guava</exclude>
+                                    </excludes>
+                                </requireUpperBoundDeps>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

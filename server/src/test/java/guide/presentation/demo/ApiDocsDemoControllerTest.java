@@ -67,10 +67,15 @@ class ApiDocsDemoControllerTest {
     }
 
     private JsonNode fetchCoverage() throws Exception {
+        // 60s, not 10: the endpoint self-fetches /v3/api-docs, and springdoc's
+        // on-demand full-spec generation now scans 44 topics' worth of
+        // controllers — under full-suite load the first call can outrun a
+        // 10s budget (it did, twice, at 44 topics). The contract under test
+        // is "the report is derived and correct", not a latency bound.
         HttpRequest request = HttpRequest.newBuilder(
                         URI.create("http://localhost:" + port + "/api/demo/api-docs/coverage"))
                 .GET()
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(60))
                 .build();
         HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode(), "coverage must answer 200, body: " + response.body());

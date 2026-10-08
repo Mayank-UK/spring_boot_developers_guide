@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run",
+    "test": "vitest run --pool.forks.maxForks=4",
     "test:watch": "vitest",
     "preview": "vite preview"
   },

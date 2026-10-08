@@ -13,11 +13,12 @@ import java.util.List;
 /**
  * Topic 31 — Dependency management. Group platform, order 2. Maven taught
  * from THIS repo's real pom — the richest specimen in the guide: a parent
- * BOM, an imported BOM, three flagged pins with recorded rationales, and
- * runtime-version truth read from the classes the JVM actually loaded.
- * The demo (deps:manifest) serves that runtime truth plus the summarized
- * dependency:tree snapshot; the flagged registry is guarded against pom
- * drift by an executable sync test.
+ * BOM, an imported BOM, the enforcer's requireUpperBoundDeps rule with its
+ * recorded exclusions and upper-bound pin, five flagged pins with recorded
+ * rationales, and runtime-version truth read from the classes the JVM
+ * actually loaded. The demo (deps:manifest) serves that runtime truth plus
+ * the summarized dependency:tree snapshot; the flagged registry is guarded
+ * against pom drift by an executable sync test.
  */
 public final class DependencyManagementTopic {
 
@@ -27,11 +28,12 @@ public final class DependencyManagementTopic {
     public static Topic topic() {
         return new Topic("dependency-management", "Dependency Management",
                 "Every dependency is product surface — attack surface, maintenance debt, "
-                        + "and supply-chain risk at once. How this repo's Maven pom turns thirty-one "
+                        + "and supply-chain risk at once. How this repo's Maven pom turns forty "
                         + "direct dependencies into one coherent, upgradable whole: parent BOM vs "
                         + "imported BOM, scopes as architecture, dependency:tree and version "
-                        + "mediation, the runtime-version manifest as a drift guard, Docker layer "
-                        + "caching economics, and the decision log behind every non-managed pin.",
+                        + "mediation, the enforcer as CI policy, the runtime-version manifest as "
+                        + "a drift guard, Docker layer caching economics, and the decision log "
+                        + "behind every non-managed pin.",
                 TopicGroupId.PLATFORM, 2,
                 sections());
     }
@@ -41,13 +43,13 @@ public final class DependencyManagementTopic {
                 section("dependencies-are-product-surface", "Dependencies are product surface",
                         "What your app ships is mostly other people's code — and every line of it is yours to answer for.",
                         text("surface:stake", """
-                                A Spring Boot application is mostly OTHER PEOPLE'S CODE. This repo declares 31 direct dependencies in its pom; after Maven resolves the transitive closure, the runtime classpath carries well over two hundred jars — the framework, the server, the JSON engine, the connection pool, the drivers, the testing machinery. Your own code is the thin layer on top. That inversion is the modern bargain: you get decades of engineering for free, and in exchange EVERY JAR IS PRODUCT SURFACE — it ships inside your artifact, runs with your privileges, parses your users' input, and breaks your production when it breaks.
+                                A Spring Boot application is mostly OTHER PEOPLE'S CODE. This repo declares 40 direct dependencies in its pom; after Maven resolves the transitive closure, the runtime classpath carries well over two hundred jars — the framework, the server, the JSON engine, the connection pool, the drivers, the testing machinery. Your own code is the thin layer on top. That inversion is the modern bargain: you get decades of engineering for free, and in exchange EVERY JAR IS PRODUCT SURFACE — it ships inside your artifact, runs with your privileges, parses your users' input, and breaks your production when it breaks.
 
                                 Three costs ride every coordinate you add. ATTACK SURFACE: the Log4Shell lesson was not "logging is bad", it was "one jar nobody thought about parsed JNDI lookups in log messages" — CVE risk scales with the amount of third-party code that handles untrusted input, and every dependency's transitive children count too. MAINTENANCE DEBT: each version you froze ages; each upgrade you defer compounds; a dependency nobody upgrades for two years turns a routine bump into a migration project. SUPPLY-CHAIN RISK: you install what you build, so a compromised artifact (a hijacked maintainer account, a typosquatted name, a poisoned build) becomes code execution in YOUR deployment — which is why checksums, reproducible builds, and a short, deliberate dependency list are security controls, not hygiene.
 
                                 The 'left-pad' empathy paragraph belongs here because it generalizes far beyond JavaScript. In 2016 an eleven-line npm package was unpublished by its author; in an hour, build pipelines worldwide broke — not because the code was valuable, but because thousands of dependency graphs contained it at depth 4 where nobody had looked. The Java ecosystem is calmer (Central artifacts are immutable, and one maintainer cannot vanish a released jar), but the STRUCTURAL lesson is identical: your dependency graph is a system you operate, most of whose nodes you have never read, chosen partly by people you have never met, several levels below the decisions you remember making. AopTopic quoted the proxy machinery; this topic quotes the pom that imports it — same rule: the code is the source of truth, and the pom is code."""),
                         text("surface:our-count", """
-                                THIS REPO is the honest specimen because it was assembled the way real projects are: a dependency per topic, each one a decision. Thirty-one direct coordinates — fifteen Boot starters (web, validation, actuator, aspectj, test, webmvc-test, testcontainers, graphql, jdbc, data-jpa, data-jpa-test, data-redis, data-mongodb, security, oauth2-resource-server, websocket), the Flyway pair, the PostgreSQL driver, the spring-grpc starter pair plus two grpc-java artifacts, springdoc, Bucket4j, Thumbnailator, devtools, and three Testcontainers modules. Every one of them carries a comment saying WHICH TOPIC needed it and WHY it was chosen — not as ceremony, but because six months later "why is this here" is the first question every removal or upgrade asks. The count itself is a taught number: 31 direct is what COMPREHENSIVE coverage costs; a focused service should carry a fraction of it, and the rubric for saying no comes at the end of this topic.""")),
+                                THIS REPO is the honest specimen because it was assembled the way real projects are: a dependency per topic, each one a decision. Forty direct coordinates — seventeen Boot starters (web, validation, actuator, aspectj, test, graphql, jdbc, data-jpa, data-jpa-test, data-redis, data-mongodb, security, oauth2-resource-server, websocket, restclient, webclient, mail), the Flyway pair, the PostgreSQL driver, the spring-grpc starter pair plus two grpc-java artifacts, the five-artifact observability set (the logstash encoder, the micrometer tracing bridge, Boot's brave tracing module, the prometheus registry, brave's slf4j decorator), springdoc, Bucket4j, Thumbnailator, Resilience4j, devtools, and the test-side set (spring-security-test, Boot's webmvc-test and testcontainers modules, and three Testcontainers modules). Every one of them carries a comment saying WHICH TOPIC needed it and WHY it was chosen — not as ceremony, but because six months later "why is this here" is the first question every removal or upgrade asks. The count itself is a taught number: 40 direct is what COMPREHENSIVE coverage costs; a focused service should carry a fraction of it, and the rubric for saying no comes at the end of this topic.""")),
                 section("versions-scopes-and-the-bom", "Versions, scopes, and the BOM",
                         "SemVer's real limits, the two ways a Maven build centralizes versions — parent BOM and imported BOM — and scopes as architecture, not bookkeeping.",
                         text("ver:semver", """
@@ -67,7 +69,7 @@ public final class DependencyManagementTopic {
                         text("ver:parent-tradeoff", """
                                 The PARENT BOM (spring-boot-starter-parent) is inheritance: this project becomes a child of the Boot build, inheriting a curated dependencyManagement block covering hundreds of tested versions (Boot 4.1.1 pairs Spring Framework 7.0.9 with Jackson 3.1.5, Hibernate 7.4.5, Tomcat 11.0.24, Testcontainers 2.0.5 — one compatibility-tested set), plus plugin configuration and Java defaults. Its constraint is structural: single inheritance. You cannot also parent to your company's BOM, and versionless deps only work for artifacts the parent manages. When Spring ships something OUTSIDE the Boot BOM — as with the gRPC integration — the second mechanism applies: import a BOM into dependencyManagement, which ALIGNS a foreign ecosystem's versions without touching inheritance:"""),
                         code("ver:grpc-bom", "xml",
-                                "server/pom.xml — mechanism two: the imported BOM. spring-grpc's own dependency set, aligned to versions its project tested",
+                                "server/pom.xml — mechanism two: the imported BOM (spring-grpc's own tested set) plus the enforcer-driven upper-bound pin for a transitive jar — two different jobs in one dependencyManagement block",
                                 "server/pom.xml", """
                                 <dependencyManagement>
                                     <dependencies>
@@ -78,11 +80,16 @@ public final class DependencyManagementTopic {
                                             <type>pom</type>
                                             <scope>import</scope>
                                         </dependency>
+                                        <dependency>
+                                            <groupId>com.google.errorprone</groupId>
+                                            <artifactId>error_prone_annotations</artifactId>
+                                            <version>2.41.0</version>
+                                        </dependency>
                                     </dependencies>
                                 </dependencyManagement>
                                 """),
                         text("ver:props", """
-                                The ${spring-grpc.version} property (1.0.3) is one of FOUR version-shaped properties in this pom — the only places a number can drift apart are exactly these:
+                                The ${spring-grpc.version} property (1.0.3) is one of FOUR version-shaped properties in this pom — and one more literal number lives in the dependencyManagement block just quoted (the 2.41.0 error_prone pin, whose story the tree section below tells: the enforcer demanded it). The only places a number can drift apart are exactly these:
 
                                 """),
                         code("ver:properties", "xml",
@@ -122,7 +129,7 @@ public final class DependencyManagementTopic {
                 section("the-tree-and-the-enforcer", "The tree and the enforcer",
                         "dependency:tree anatomy, how Maven actually resolves conflicts (nearest-wins, and what the BOM overrides), the enforcer plugin — and this repo's runtime-version manifest as a live drift guard.",
                         text("tree:anatomy", """
-                                `mvn dependency:tree` prints the resolved graph — the single most useful command in dependency work. Each line is one resolved artifact with its VERSION and SCOPE; indentation shows who pulled whom. This repo's snapshot (the full 31-direct capture lives in the demo below and in server/src/main/resources/deps/dependency-tree-snapshot.txt) reads like a map of decisions — starters as trunks, drivers as leaves:
+                                `mvn dependency:tree` prints the resolved graph — the single most useful command in dependency work. Each line is one resolved artifact with its VERSION and SCOPE; indentation shows who pulled whom. This repo's snapshot (the full 40-direct capture lives in the demo below and in server/src/main/resources/deps/dependency-tree-snapshot.txt) reads like a map of decisions — starters as trunks, drivers as leaves:
 
                                 """),
                         code("tree:snapshot", "text",
@@ -138,9 +145,39 @@ public final class DependencyManagementTopic {
                                 \\- net.coobird:thumbnailator:jar:0.4.21:compile
                                 """),
                         text("tree:mediation", """
-                                CONFLICT RESOLUTION — the part everyone gets wrong once. When two branches of the graph want different versions of the same coordinate, Maven does NOT pick the newest. It applies NEAREST-WINS: the version declared CLOSEST to the root wins, purely by graph distance. This repo's tree has a real, current specimen: io.grpc:grpc-protobuf (depth 2) declares guava 33.4.8-android, while grpc-services → protobuf-java-util (one level deeper) asks for guava 33.4.8-jre. Mediation keeps -android — not because it is better, but because it is NEARER. Run `mvn dependency:tree -Dverbose` and maven prints the losers as "omitted for conflict with …" (the same run also shows the BOM's overrides — spring-web requested micrometer-observation 1.16.7 and the Boot BOM forced 1.17.1; dependencyManagement beats every transitive request, always). Nearest-wins surprises you when a SHALLOW declaration freezes a shared library while other branches silently run against a version they never asked for — the classic breakage is a NoSuchMethodError at runtime in code that compiled fine, because compile used one classpath and runtime another. Read the tree before blaming the framework.
+                                CONFLICT RESOLUTION — the part everyone gets wrong once. When two branches of the graph want different versions of the same coordinate, Maven does NOT pick the newest. It applies NEAREST-WINS: the version declared CLOSEST to the root wins, purely by graph distance. This repo's tree has a real, current specimen: io.grpc:grpc-protobuf (depth 2) declares guava 33.4.8-android, while grpc-services (one level deeper, under grpc-netty) asks for the -jre flavor of the same 33.4.8. Mediation keeps -android — not because it is better, but because it is NEARER. Run `mvn dependency:tree -Dverbose` and maven prints the losers as "omitted for conflict with …" (the same run also shows the BOM's overrides — spring-web requested micrometer-observation 1.16.7 and the Boot BOM forced 1.17.1; dependencyManagement beats every transitive request, always). Nearest-wins surprises you when a SHALLOW declaration freezes a shared library while other branches silently run against a version they never asked for — the classic breakage is a NoSuchMethodError at runtime in code that compiled fine, because compile used one classpath and runtime another. Read the tree before blaming the framework.
 
-                                The tree tells you what RESOLVED. To turn resolution rules into CI-enforced policy, the MAVEN ENFORCER PLUGIN is the standard tool — rules like requireUpperBoundDeps (fail when mediation kept an OLDER version than some branch requested — the exact guava situation above), requireReleaseDeps (fail on SNAPSHOTs), banDuplicatePomDependencyVersions, and dependencyConvergence (fail on ANY conflict, forcing you to choose explicitly). This repo does not run the enforcer yet — an honest gap, flagged here rather than papered over; requireUpperBoundDeps is the first rule worth adding because it catches the nearest-wins trap mechanically. What this repo DOES run is a different, complementary guard: the manifest below reads versions from the RUNTIME itself, and tests pin them — not to freeze the numbers (the BOM bumps them constantly, which is the point of a BOM) but to catch a resolution change that silently alters what the demo and the teaching claims describe."""),
+                                The tree tells you what RESOLVED. To turn resolution rules into CI-enforced policy, the MAVEN ENFORCER PLUGIN is the standard tool — rules like requireUpperBoundDeps (fail when mediation kept an OLDER version than some branch requested), requireReleaseDeps (fail on SNAPSHOTs), banDuplicatePomDependencyVersions, and dependencyConvergence (fail on ANY conflict, forcing you to choose explicitly). This repo runs requireUpperBoundDeps on every validate, and the rule's FIRST run here is worth retelling because it produced exactly the right kind of argument. Six violations, three families. One family was REAL and got FIXED: gson (riding grpc-services) asked error_prone_annotations 2.41.0 while grpc-stub's nearer 2.36.0 won — an annotations-only jar has no runtime behavior to regress, so the pom pins the upper bound in dependencyManagement (quoted in the versions section above) and the violation is gone, not silenced. The other two families were the rule's known blind spots, EXCLUDED with the reason recorded beside the exclusion: the BOM-owned Jackson 2 line (the Boot BOM deliberately manages 2.21.5 against swagger's 2.22.1 request — dependencyManagement beating a transitive request is the BOM working as designed, not a defect), and the guava classifier pair (-android and -jre are the same 33.4.8 in two flavors, which the rule's version comparison misreads as a downgrade). The method is the lesson: an enforcer rule is a POLICY you tune — run it, read every violation, resolve what is real, exclude what is deliberate, and record why next to each exclusion:"""),
+                        code("tree:enforcer-pom", "xml",
+                                "server/pom.xml — the enforcer, live: requireUpperBoundDeps with its two recorded exclusion families (the real error_prone fix lives in dependencyManagement, quoted earlier)",
+                                "server/pom.xml", """
+                                <plugin>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-enforcer-plugin</artifactId>
+                                    <executions>
+                                        <execution>
+                                            <id>enforce-upper-bound-deps</id>
+                                            <goals>
+                                                <goal>enforce</goal>
+                                            </goals>
+                                            <configuration>
+                                                <rules>
+                                                    <requireUpperBoundDeps>
+                                                        <excludes>
+                                                            <!-- … the BOM-owned Jackson 2 line: the Boot BOM manages 2.21.5 … -->
+                                                            <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                                            <!-- … the guava classifier pair: same 33.4.8, two flavors … -->
+                                                            <exclude>com.google.guava:guava</exclude>
+                                                        </excludes>
+                                                    </requireUpperBoundDeps>
+                                                </rules>
+                                            </configuration>
+                                        </execution>
+                                    </executions>
+                                </plugin>
+                                """),
+                        text("tree:enforcer-complement", """
+                                The enforcer polices the BUILD-TIME graph; this repo pairs it with a different, complementary guard: the manifest below reads versions from the RUNTIME itself, and tests pin them — not to freeze the numbers (the BOM bumps them constantly, which is the point of a BOM) but to catch a resolution change that silently alters what the demo and the teaching claims describe."""),
                         demo("tree:demo", "deps:manifest",
                                 "The live dependency manifest",
                                 "GET /api/demo/deps/manifest reads the version of every curated artifact from the class that is actually loaded — manifest metadata first, jar-name fallback second — beside the flagged-choices registry. GET /api/demo/deps/tree serves the summarized dependency:tree snapshot with its recorded mediation conflicts."),
@@ -166,7 +203,7 @@ public final class DependencyManagementTopic {
                                 }
                                 """),
                         text("tree:drift", """
-                                The same philosophy guards the FLAGGED pins — the three dependencies that carry explicit versions because no BOM manages them. Their rationales live in FlaggedDecisions (the domain registry the manifest serves), and a sync test parses the REAL pom and fails in BOTH directions: a new pin without a registered WHY fails the suite, and a registry entry whose pin vanished from the pom fails it too. Prose comments rot silently; presence-or-absence is executable:
+                                The same philosophy guards the FLAGGED pins — the five dependencies that carry explicit versions because no BOM manages them. Their rationales live in FlaggedDecisions (the domain registry the manifest serves), and a sync test parses the REAL pom and fails in BOTH directions: a new pin without a registered WHY fails the suite, and a registry entry whose pin vanished from the pom fails it too. Prose comments rot silently; presence-or-absence is executable:
 
                                 """),
                         code("tree:sync-test", "java",
@@ -281,7 +318,7 @@ public final class DependencyManagementTopic {
                                 </dependency>
                                 """),
                         text("choose:testcontainers", """
-                                TESTCONTAINERS 2.x (topic 18's foundation) is the managed-migration case: the artifacts were RENAMED (junit-jupiter → testcontainers-junit-jupiter, postgresql → testcontainers-postgresql, mongodb → testcontainers-mongodb — old names stop at 1.21.x), yet the pom stays VERSIONLESS because the Boot BOM imports testcontainers-bom 2.0.5 — the rename was an artifactId change, and once the new names are in place, the BOM owns the numbers again. The general lesson: let the BOM carry version churn where a BOM exists; carry explicit pins (with recorded rationale) only where none does — springdoc, bucket4j, thumbnailator are the three, and the flagged registry keeps them honest. Every one of those rationales ships in the manifest demo above, served from the same registry the sync test guards:
+                                TESTCONTAINERS 2.x (topic 18's foundation) is the managed-migration case: the artifacts were RENAMED (junit-jupiter → testcontainers-junit-jupiter, postgresql → testcontainers-postgresql, mongodb → testcontainers-mongodb — old names stop at 1.21.x), yet the pom stays VERSIONLESS because the Boot BOM imports testcontainers-bom 2.0.5 — the rename was an artifactId change, and once the new names are in place, the BOM owns the numbers again. The general lesson: let the BOM carry version churn where a BOM exists; carry explicit pins (with recorded rationale) only where none does — springdoc, bucket4j, thumbnailator, the logstash encoder, and resilience4j are the five, and the flagged registry keeps them honest. Every one of those rationales ships in the manifest demo above, served from the same registry the sync test guards:
 
                                 """),
                         code("choose:registry", "java",
@@ -299,7 +336,7 @@ public final class DependencyManagementTopic {
                                 // … later topics append their pins the same way
                                 """),
                         text("choose:say-no", """
-                                The rubric's last move is SAYING NO. "It's just one small dependency" is how the 31-direct pom became the ecosystem-normal 300-direct pom; the review question for every new coordinate is not "does it work" but "what does it cost for the next five years, and is there no standard-platform answer already on the classpath?" — Spring's own starters cover a remarkable amount of ground before you ever visit Central.""")),
+                                The rubric's last move is SAYING NO. "It's just one small dependency" is how the 40-direct pom became the ecosystem-normal 300-direct pom; the review question for every new coordinate is not "does it work" but "what does it cost for the next five years, and is there no standard-platform answer already on the classpath?" — Spring's own starters cover a remarkable amount of ground before you ever visit Central.""")),
                 section("terminal-companion", "Terminal companion",
                         "curl the manifest, walk the tree, interrogate updates — the dependency commands worth memorizing.",
                         text("term:intro", """
@@ -319,7 +356,7 @@ public final class DependencyManagementTopic {
                                 curl -s localhost:8080/api/demo/deps/tree | head -30
                                 """),
                         code("term:tree-commands", "bash",
-                                "the maven side: tree, verbose conflicts, and the update radar",
+                                "the maven side: tree, verbose conflicts, the enforcer, and the update radar",
                                 null, """
                                 # the resolved graph (this repo runs builds in docker — see the DoD)
                                 docker run --rm -v "$PWD":/repo -w /repo/server -v sbdg-m2:/root/.m2 \\
@@ -327,6 +364,9 @@ public final class DependencyManagementTopic {
 
                                 # conflicts + BOM overrides — the losers are printed as "omitted"
                                 mvn -B dependency:tree -Dverbose | grep -E "omitted for conflict|version managed from" | sort -u
+
+                                # the build-time policy: validate runs requireUpperBoundDeps (the enforcer)
+                                mvn -B validate
 
                                 # who pulls THIS jar? walk the tree upwards with grep -B
                                 grep -B 4 "jackson-databind" /tmp/tree.txt

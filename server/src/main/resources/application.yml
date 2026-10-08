@@ -224,6 +224,13 @@ server:
 springdoc:
   swagger-ui:
     path: /docs
+  # springdoc.pre-loading-enabled: true   # real for springdoc 3.1.1 (verified
+  # in the jar's config metadata) but deliberately OFF: it would generate the
+  # whole spec at startup, taxing every boot (and every @SpringBootTest) with
+  # the 16s+ first-scan this app instead pays once per runtime on the first
+  # /v3/api-docs request — a cost ApiDocsDemoConfig.apiDocsRestClient's read
+  # budget is sized to survive. Uncomment only if cold first-call latency of
+  # the document itself ever matters more than boot time.
 
 management:
   endpoints:
