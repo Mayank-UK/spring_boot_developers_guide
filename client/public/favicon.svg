@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Spring Boot Developers Guide</title>
+  <!-- indigo app-icon tile (the guide's primary) with a white Spring leaf glyph -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#4f46e5" />
+  <path d="M12 52 C 14 30 28 14 50 13 C 51 19 48 23 43 23 C 32 26 21 39 12 52 Z" fill="#ffffff" />
+</svg>
