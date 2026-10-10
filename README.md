@@ -96,10 +96,8 @@ e2e/            host-run Playwright suite against the dev stack
 deploy/k8s/     the real manifests the deployment topic teaches
 .docker/        dev & prod Dockerfiles, nginx.conf, dev & prod compose files
 .devcontainer/  VS Code devcontainer, attaching to the compose `dev` service
-.github/workflows/  ci.yml and e2e.yml
 ```
 
 ## CI
 
-- **ci.yml** (pushes to master and PRs): server job runs `mvn -B verify` — the full suite plus the JaCoCo coverage floors bound at `verify`; client job runs `npm ci` → `npm test` → `npm run build`.
-- **e2e.yml** (weekly cron, Mondays 03:00 UTC, plus manual dispatch): spins up the compose stack, waits for health, runs the Playwright suite, and always tears the stack down — even on failure.
+None, by choice. The gate is the local docker verify above — the same commands a hosted pipeline's stages would run; the testing and deployment topics teach CI/CD conceptually on top of that contract.

@@ -22,8 +22,9 @@ import org.junit.jupiter.api.Test;
  * from this repo's own tests (the scripted-fake use case test, the Mockito
  * adapter test, the @WebMvcTest slice, the @DataJpaTest slice, the
  * rollback workaround, the whole-context apex, the runner use case), xml
- * from the pom's test artifacts, yaml from the CI workflow, tsx from the
- * client demo and its spec.
+ * from the pom's test artifacts, tsx from the client demo and its spec.
+ * The CI section runs no hosted workflow to quote, so its contract block
+ * rides as an exempt bash one-liner pair.
  */
 class TestingTopicTest {
 
@@ -109,9 +110,13 @@ class TestingTopicTest {
         assertTrue(sourced.stream().anyMatch(block -> "xml".equals(block.language())
                         && block.source().endsWith("pom.xml")),
                 "the test artifacts are quoted from the pom (xml)");
-        assertTrue(sourced.stream().anyMatch(block -> "yaml".equals(block.language())
-                        && block.source().endsWith("ci.yml")),
-                "the CI workflow is quoted in the CI section");
+        assertTrue(topic.sections().stream()
+                        .filter(section -> section.id().equals("the-ci-contract"))
+                        .flatMap(section -> section.blocks().stream())
+                        .filter(block -> block instanceof CodeBlock code && "bash".equals(code.language()))
+                        .map(block -> (CodeBlock) block)
+                        .anyMatch(block -> "ci:commands".equals(block.id()) && block.source() == null),
+                "the CI section teaches the pipeline contract as an exempt bash block — no workflow file exists to quote");
         assertTrue(sourced.stream().anyMatch(block -> "tsx".equals(block.language())
                         && block.source().endsWith("testing_runner_demo.tsx")),
                 "the client runner demo is quoted from the live demo (tsx)");

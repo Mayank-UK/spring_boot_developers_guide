@@ -34,7 +34,7 @@ public final class BestPracticesTopic {
                         + "this repo. Typed configuration that fails the boot, one error taxonomy, "
                         + "hash-and-verify credentials, SQL that binds every value, resilience "
                         + "behind a port, logs as fields, measurements over guesses, graceful "
-                        + "shutdown, CI as the definition of done — capped by the anti-checklist "
+                        + "shutdown, the suite as the definition of done — capped by the anti-checklist "
                         + "demo, where the app grades ITSELF live and hands you a curl for "
                         + "everything it cannot see.",
                 TopicGroupId.PLATFORM, 13,
@@ -46,7 +46,7 @@ public final class BestPracticesTopic {
                 section("setup", "Setup: decisions that age well",
                         "Most of a service's future pain is decided in its first week. The setup choices this repo made — one BOM, one typed config record, twelve-factor overrides — are the ones that still pay.",
                         text("bp:setup-intro", """
-                                BEST PRACTICES TOPICS ARE UNFAIR. Every rule sounds obvious read aloud — validate your configuration, manage your versions, don't invent a second error format — and every one of them exists because a real codebase skipped it and paid. So this topic refuses to preach from a whiteboard: each section names the practice, explains the judgment behind it, and then QUOTES THIS REPO'S OWN CODE as the exemplar — the snippet sources are files that compile, run, and are tested every CI push. The guide you just read taught forty-one mechanisms; this topic is the layer above them, the taste that decides which mechanism to reach for.
+                                BEST PRACTICES TOPICS ARE UNFAIR. Every rule sounds obvious read aloud — validate your configuration, manage your versions, don't invent a second error format — and every one of them exists because a real codebase skipped it and paid. So this topic refuses to preach from a whiteboard: each section names the practice, explains the judgment behind it, and then QUOTES THIS REPO'S OWN CODE as the exemplar — the snippet sources are files that compile, run, and are tested on every clean-machine suite run. The guide you just read taught forty-one mechanisms; this topic is the layer above them, the taste that decides which mechanism to reach for.
 
                                 START WHERE THE PROJECT STARTED, because setup decisions compound the longest. Version management: the pom pins ONE thing — the Spring Boot parent — and every starter under it rides versionless through the BOM. That is not laziness; it is the dependency-management topic's whole lesson compressed into a file header. The moment you hand-pin a managed dependency you own its upgrade forever; the moment you add a second framework BOM (this repo has exactly one, for spring-grpc) you align a family, not a version:
                                 """),
@@ -285,30 +285,12 @@ public final class BestPracticesTopic {
                         text("bp:ops-close", """
                                 The closing operational habits, each one a file in deploy/ or .docker/: THE IMAGE IS THE SAME ARTIFACT EVERYWHERE (multi-stage build, layered jars for cache-friendly rebuilds, one build promoted through environments by configuration), CONFIG IS INJECTED NOT BAKED (the configmap carries the GUIDE_* rails; secrets never live in the image), and PARITY IS CHECKED, not hoped (the deploy demo reads the real compose file through a typed mirror and reports env-parity rails — the gap between compose and k8s is rendered, not remembered). Operations done this way has a property nothing else in this topic has: when something breaks at 4 a.m., the contract for what SHOULD be happening is sitting in reviewable text files, and the diff between intended and actual is one command.""")),
                 section("git-review", "Git and review: the suite is the definition of done",
-                        "The workflow practices are what keep every other practice honest. Small diffs, CI on every push, and a review culture that reads tests before prose.",
+                        "The workflow practices are what keep every other practice honest. Small diffs, the suite green on a clean machine before anything merges, and a review culture that reads tests before prose.",
                         text("bp:git-intro", """
-                                THE GIT PRACTICE THIS REPO MODELS: THE SUITE IS THE DEFINITION OF DONE, AND CI RUNS IT ON EVERY PUSH. The workflow file is short enough to read in one sitting and that brevity is the point — per package, one job, the same commands a developer runs locally (mvn -B verify — verify, not test, so the JaCoCo coverage gate bound to that phase is enforced in CI too; npm ci, test, build), so a green check on a pull request MEANS the same thing a green terminal means. Every guard this topic has named is in that suite: the dependency-rule test scans imports, the snippet-source test verifies teaching code against real files, drift tests pin the OpenAPI paths. A best practice that lives only in a CONVENTIONS.md is a suggestion; the same practice wired into CI is a floor:
+                                THE GIT PRACTICE THIS REPO MODELS: THE SUITE IS THE DEFINITION OF DONE — GREEN ON A CLEAN MACHINE BEFORE ANYTHING MERGES. This guide runs no hosted CI, by choice: the contract is the pair of docker one-liners from the testing topic (the server suite with its coverage gates, the client's install-test-build), runnable by any reader with a Docker daemon and nothing else. The brevity is the point — per package, the same commands a developer runs locally, so a green terminal on a fresh clone MEANS the same thing a green terminal on yours means; wire those same two commands into any pipeline (GitHub Actions, GitLab CI, a bare cron job) and a green check there means it too. Every guard this topic has named is in that suite: the dependency-rule test scans imports, the snippet-source test verifies teaching code against real files, drift tests pin the OpenAPI paths. A best practice that lives only in a CONVENTIONS.md is a suggestion; the same practice wired into the suite that gates merges is a floor:
                                 """),
-                        code("bp:ci", "yaml",
-                                ".github/workflows/ci.yml — the definition of done, on every push: per package, the same commands a developer runs locally",
-                                ".github/workflows/ci.yml", """
-                                jobs:
-                                  server:
-                                    runs-on: ubuntu-latest
-                                    defaults:
-                                      run:
-                                        working-directory: server
-                                    steps:
-                                      - uses: actions/checkout@v4
-                                      - uses: actions/setup-java@v4
-                                        with:
-                                          distribution: temurin
-                                          java-version: 25
-                                          cache: maven
-                                          cache-dependency-path: server/pom.xml
-                                      - run: mvn -B verify"""),
                         text("bp:git-close", """
-                                Around CI, the git habits that make review possible: SMALL DIFFS (a pull request a reviewer can hold in their head gets a real review; a 3000-line Friday dump gets a glance and an approve), COMMITS THAT EXPLAIN WHY (the diff already says what), and TESTS REVIEWED AS CODE (the reviewer's first question for a new endpoint is 'where is its test?', because in this repo every demo endpoint arrives with one — the invariant that keeps 1100+ tests meaningful rather than aspirational). The branch discipline is deliberately boring: trunk-based with short-lived branches, because the expensive part of git workflow is not merging, it is DRIFT — the longer a branch lives, the more it diverges from the truth CI is defending. Ship small, ship often, let the suite say no.""")),
+                                Around the suite, the git habits that make review possible: SMALL DIFFS (a pull request a reviewer can hold in their head gets a real review; a 3000-line Friday dump gets a glance and an approve), COMMITS THAT EXPLAIN WHY (the diff already says what), and TESTS REVIEWED AS CODE (the reviewer's first question for a new endpoint is 'where is its test?', because in this repo every demo endpoint arrives with one — the invariant that keeps 1100+ tests meaningful rather than aspirational). The branch discipline is deliberately boring: trunk-based with short-lived branches, because the expensive part of git workflow is not merging, it is DRIFT — the longer a branch lives, the more it diverges from the truth the suite is defending. Ship small, ship often, let the suite say no.""")),
                 section("human-practices", "Human practices: write for the next engineer",
                         "The hardest practices are social. Names, honesty about uncertainty, and code a tired teammate can read — the habits that decide whether your codebase is a place people stay.",
                         text("bp:human-intro", """
@@ -335,7 +317,7 @@ public final class BestPracticesTopic {
                 section("anti-checklist", "The anti-checklist (and the live one)",
                         "A checklist you never run is decoration. This demo is the checklist RUNNING: the app grades itself where it can see, and hands you a curl where it cannot.",
                         text("bp:check-intro", """
-                                THE PROBLEM WITH BEST-PRACTICE LISTS is that reading one verifies nothing. So this topic's demo is the opposite of a poster: GET /api/demo/best/checklist serves every practice from this topic as a row — category, id, title — and for each row either a LIVE VERDICT the app self-reported from in-process state, or a VERIFY pointer whose curl output IS the verdict. The split is the honesty: things the app can see about itself (the taxonomy registered in the FailureKind enum, the content registry that validated at startup, the effective virtual-threads and shutdown properties) get real verdicts, deterministic by construction; things that are ENVIRONMENTAL (CI green, a database actually parameterizing, a probe answering) get a pointer, because a checklist that claims a pass it cannot see is exactly the decoration this section is against. The two item builders are the whole mechanism:
+                                THE PROBLEM WITH BEST-PRACTICE LISTS is that reading one verifies nothing. So this topic's demo is the opposite of a poster: GET /api/demo/best/checklist serves every practice from this topic as a row — category, id, title — and for each row either a LIVE VERDICT the app self-reported from in-process state, or a VERIFY pointer whose curl output IS the verdict. The split is the honesty: things the app can see about itself (the taxonomy registered in the FailureKind enum, the content registry that validated at startup, the effective virtual-threads and shutdown properties) get real verdicts, deterministic by construction; things that are ENVIRONMENTAL (a clean-machine suite run, a database actually parameterizing, a probe answering) get a pointer, because a checklist that claims a pass it cannot see is exactly the decoration this section is against. The two item builders are the whole mechanism:
                                 """),
                         code("bp:check-engine", "java",
                                 "guide/domain/best/PracticeChecklist.java — the two verdict kinds: a live self-report, or a verify pointer — never a claimed pass the app cannot see",
@@ -410,11 +392,14 @@ public final class BestPracticesTopic {
                                 curl -s localhost:8080/actuator/health/readiness
                                 curl -s localhost:8080/actuator/prometheus | grep guide_http_server_requests | head -3
 
-                                # the process row: CI's latest verdict, straight from the source
-                                curl -s 'https://api.github.com/repos/Mayank-UK/spring_boot_developers_guide/actions/runs?per_page=1' \\
-                                  | python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"][0]; \\
-                                  print(r["name"], r["status"], r["conclusion"])'
-                                # CI completed success"""),
+                                # the process row: the suite green on a clean machine — the repo's
+                                # own definition of done, no pipeline required
+                                docker run --rm -v "$PWD":/repo -w /repo/server -v sbdg-m2:/root/.m2 \\
+                                  -v /var/run/docker.sock:/var/run/docker.sock \\
+                                  -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \\
+                                  maven:3.9-eclipse-temurin-25 \\
+                                  bash -lc 'flock /repo/server/.verify.lock mvn -q test'
+                                # exit 0 — a thousand-plus tests, zero failures"""),
                         text("bp:tc-close", """
                                 That tour is the topic's thesis in executable form: nothing on the checklist is taken on faith — the app's own state answered the live rows, and one curl each answered the rest. Forty-one topics taught you the machinery; this one asks you to keep it honest. The two capstones that follow take the posture outward — third-party integrations (the same disciplines when the dependency is someone else's service) and advanced architecture (the same vocabulary when one system becomes several). Bring this checklist with you; it travels.""")));
     }

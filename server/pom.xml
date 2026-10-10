@@ -523,7 +523,7 @@
                  ONE was resolved for real (the error_prone upper-bound pin in
                  dependencyManagement above); the other five are the two
                  deliberate exclusion families recorded below. It binds to
-                 the validate phase, so every mvn run in CI polices the tree
+                 the validate phase, so every mvn run polices the tree
                  mechanically. Versionless: the Boot parent's pluginManagement
                  pins the plugin (3.6.3). -->
             <plugin>

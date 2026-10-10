@@ -18,9 +18,10 @@ import java.util.Set;
  *   than hopes.
  *
  * - VERIFY: a pointer to where the truth lives when it is environmental
- *   (CI green, a database actually parameterizing, a probe answering) — one
- *   curl command whose output IS the verdict. The checklist never claims a
- *   pass it cannot see; that honesty is itself the practice being taught.
+ *   (a clean-machine suite run, a database actually parameterizing, a probe
+ *   answering) — one curl command whose output IS the verdict. The checklist
+ *   never claims a pass it cannot see; that honesty is itself the practice
+ *   being taught.
  *
  * The FACTS arrive as a plain record built at the composition root: the only
  * layer allowed to talk to Spring reads the real Environment and hands the
@@ -152,9 +153,12 @@ public final class PracticeChecklist {
                         + " — SIGTERM drains in-flight work; k8s's grace period is deliberately longer"));
 
         // ---- process ----
-        items.add(verify("process", "ci-green", "The suite is the definition of done, and it runs on every push",
-                "the workflow file runs mvn test + npm ci/test/build per package",
-                "curl -s 'https://api.github.com/repos/Mayank-UK/spring_boot_developers_guide/actions/runs?per_page=1'"));
+        items.add(verify("process", "suite-green", "The suite is the definition of done, green on a clean machine",
+                "the full server suite in a disposable container — the same one-liner the devcontainer runs",
+                "docker run --rm -v \"$PWD\":/repo -w /repo/server -v sbdg-m2:/root/.m2 "
+                        + "-v /var/run/docker.sock:/var/run/docker.sock "
+                        + "-e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal "
+                        + "maven:3.9-eclipse-temurin-25 bash -lc 'flock /repo/server/.verify.lock mvn -q test'"));
 
         // ---- humans ----
         items.add(verify("humans", "review-the-practice", "Small PRs, reviewed, against the checklist",
@@ -171,8 +175,8 @@ public final class PracticeChecklist {
                         + "THIS process — the taxonomy, the registry, the effective properties — "
                         + "so they cannot flake.",
                 verifyPointers + " items are VERIFY by design: their truth is environmental (a "
-                        + "database, a cluster, a CI run), so the checklist hands you the curl and "
-                        + "never claims the pass for them.",
+                        + "database, a cluster, a clean-machine suite run), so the checklist hands "
+                        + "you the command and never claims the pass for them.",
                 "the categories mirror the topic's sections — read the section, then find its row "
                         + "here and run it against your own app.");
 

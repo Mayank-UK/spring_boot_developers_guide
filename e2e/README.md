@@ -58,8 +58,8 @@ docker compose -f .docker/docker-compose.yml stop
 ```
 
 Restart later with the same `up -d` command — named volumes keep the Maven /
-npm caches, so warm restarts are quick. CI runs the suite the same way and
-always tears the stack down (`if: always()`), even on failure.
+npm caches, so warm restarts are quick. Treat the teardown as part of every
+session, not an optional extra.
 
 ## What the suite covers
 

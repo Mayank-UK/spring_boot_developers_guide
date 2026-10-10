@@ -402,30 +402,25 @@ public final class TestingTopic {
 
                                 This repo's own decision, stated for the record: coverage GATES are deferred to the hardening phase, deliberately. A teaching repo's content files and demos carry long stretches where the "coverage" question is not meaningful (prose-bearing records, hand-driven browser surfaces), and bolting a gate on early would optimize the suite toward the metric before the suite exists. The honest order is the one this topic built: tests that assert behavior first, the measurement second, the gate last — and only where it guards a real regression risk.""")),
                 section("the-ci-contract", "The CI contract",
-                        "Green on a clean machine, with the same commands the developer runs — that is the entire job description. This repo's workflow, read as a contract.",
+                        "Green on a clean machine, with the same commands the developer runs — that is the entire job description. What a pipeline would run, and why this repo runs it locally instead.",
                         text("ci:what", """
-                                CI is not a linting ritual; it is a CONTRACT: the branch is shippable if and only if the same commands that verify it locally are green on a machine nobody pre-warmed. That definition does the design work — same commands (no CI-only flags that test a different thing), clean machine (dependencies come from the lockfile and the cache, not from a developer's warm volume), and both packages (server AND client, because the guide is the pair of them). The workflow is small enough to read in one glance, which is itself the standard:"""),
-                        code("ci:workflow", "yaml",
-                                ".github/workflows/ci.yml — the whole contract: two jobs, the same commands the devcontainer runs",
-                                ".github/workflows/ci.yml", """
-                                jobs:
-                                  server:
-                                    runs-on: ubuntu-latest
-                                    defaults:
-                                      run:
-                                        working-directory: server
-                                    steps:
-                                      - uses: actions/checkout@v4
-                                      - uses: actions/setup-java@v4
-                                        with:
-                                          distribution: temurin
-                                          java-version: 25
-                                          cache: maven
-                                          cache-dependency-path: server/pom.xml
-                                      - run: mvn -B verify
-                                """),
+                                CI is not a linting ritual; it is a CONTRACT: the branch is shippable if and only if the same commands that verify it locally are green on a machine nobody pre-warmed. That definition does the design work — same commands (no CI-only flags that test a different thing), clean machine (dependencies come from the lockfile and the cache, not from a developer's warm volume), and both packages (server AND client, because the guide is the pair of them). This repo enforces that contract deliberately with NO hosted pipeline: a single-maintainer teaching repo gains nothing from a workflow runner it cannot quote honestly, and every reader must be able to run the definition of done without an account on anything. So the contract lives in the devcontainer and in two docker one-liners — which are, verbatim, the two stages a pipeline would run:"""),
+                        code("ci:commands", "bash",
+                                "the whole contract, runnable by any reader: the two commands a pipeline's stages would run",
+                                null, """
+                                # the server stage — the full suite, real PostgreSQL via Testcontainers
+                                docker run --rm -v "$PWD":/repo -w /repo/server -v sbdg-m2:/root/.m2 \\
+                                     -v /var/run/docker.sock:/var/run/docker.sock \\
+                                     -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \\
+                                     maven:3.9-eclipse-temurin-25 \\
+                                     bash -lc 'flock /repo/server/.verify.lock mvn -q test'
+
+                                # the client stage — lockfile install, tests, production build
+                                docker run --rm -v "$PWD/client":/app -w /app -v sbdg-npm:/root/.npm \\
+                                     node:22-bookworm \\
+                                     bash -lc 'flock /app/.verify.lock bash -c "npm ci && npm test && npm run build"'"""),
                         text("ci:notes", """
-                                The details that make it honest: the server job needs no service containers because the suite's Testcontainers boots its own postgres (the runner's Docker daemon is the only prerequisite ubuntu-latest provides for free); the caches are keyed by the inputs that invalidate them (the pom for Maven, the lockfile for npm) so a dependency bump pays exactly one cold run; and the client job ends with npm run build because a type error that survives the tests must still die in CI — build is part of the contract, not a bonus.
+                                The details that make it honest: the server command needs no service containers because the suite's Testcontainers boots its own postgres (a Docker daemon is the only prerequisite — locally or on any runner); the named cache volumes (sbdg-m2, sbdg-npm) play exactly the role a hosted runner's caches play, keyed by the inputs that invalidate them (the pom for Maven, the lockfile for npm) so a dependency bump pays one cold run, not one per commit; and the client stage ends with npm run build because a type error that survives the tests must still die before merge — build is part of the contract, not a bonus. What a hosted pipeline would ADD is not a different contract but enforcement at the merge boundary: every pull request runs the same two stages on a clean machine, a red build cannot merge, superseded runs cancel each other, and every job carries an explicit wall-clock timeout.
 
                                 The discipline on the human side, briefly: RED MEANS STOP. A red main is a broken contract for every person who pulls it — fix or revert, never skip-a-test-to-go-green (a skipped test is an admission, and admissions get issue numbers). And keep the suite fast enough that developers run it — a suite too slow to run locally stops being a tool and becomes a queue.""")),
                 section("browser-e2e", "Browser E2E",
@@ -452,7 +447,7 @@ public final class TestingTopic {
                 section("terminal-companion", "Terminal companion",
                         "The whole topic, curled: the runner's report, the injected red check, the suite commands, and a first coverage read.",
                         text("tc:intro", """
-                                Every screen in this topic has a terminal twin. The tour assumes the stack up (docker compose -f .docker/docker-compose.yml up) with the server on localhost:8080. The suite commands assume the repo's container verification mounts — the same ones CI runs, which is the contract in one line."""),
+                                Every screen in this topic has a terminal twin. The tour assumes the stack up (docker compose -f .docker/docker-compose.yml up) with the server on localhost:8080. The suite commands assume the repo's container verification mounts — the same two commands any clean machine must run, which is the contract in one line."""),
                         code("tc:runner", "bash",
                                 "the runner's report, then the injected red check",
                                 null, """
@@ -469,9 +464,9 @@ public final class TestingTopic {
                                      -d '{"injectFailure":true}' localhost:8080/api/demo/scenario
                                 curl -s localhost:8080/api/demo/testing/run | grep -o '"failed":[0-9]*'   # "failed":1"""),
                         text("tc:suite-note", """
-                                The suite itself — the commands this topic's CI section calls the contract, exactly as the repo verifies them (flock because parallel runs share the mount; the socket and HOST_OVERRIDE because the Testcontainers tests spawn sibling containers):"""),
+                                The suite itself — the commands the CI section calls the contract, exactly as the repo verifies them (flock because parallel runs share the mount; the socket and HOST_OVERRIDE because the Testcontainers tests spawn sibling containers):"""),
                         code("tc:suite", "bash",
-                                "the whole suite, both packages, the CI way",
+                                "the whole suite, both packages, the clean-machine way",
                                 null, """
                                 # server — a thousand-plus tests, real PostgreSQL through Testcontainers
                                 docker run --rm -v "$PWD":/repo -w /repo/server -v sbdg-m2:/root/.m2 \\

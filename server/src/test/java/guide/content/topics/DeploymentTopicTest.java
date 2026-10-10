@@ -19,11 +19,12 @@ import org.junit.jupiter.api.Test;
  * sections in curriculum order (terminal companion last), every section and
  * block id is unique, the compose section mounts the deploy:stack demo
  * INLINE, and every must-source block carries a real repo source path —
- * dockerfile from both prod Dockerfiles, yaml from both compose files, the
- * CI workflow, application.yml (probes, graceful shutdown, lifecycle
- * budget), nginx.conf, and the six real deploy/k8s/ manifests; java from
+ * dockerfile from both prod Dockerfiles, yaml from both compose files,
+ * application.yml (probes, graceful shutdown, lifecycle budget),
+ * nginx.conf, and the six real deploy/k8s/ manifests; java from
  * the typed compose mirror, the use case, the demo wiring's controller; ts
- * from the client demo.
+ * from the client demo. The CI/CD section teaches conceptually — the repo
+ * ships no workflow file, so nothing there is quoted.
  */
 class DeploymentTopicTest {
 
@@ -107,9 +108,11 @@ class DeploymentTopicTest {
         assertTrue(sourced.stream().filter(block -> "yaml".equals(block.language()))
                         .anyMatch(block -> block.source().endsWith("docker-compose.prod.yml")),
                 "the prod compose boot gating is quoted");
-        assertTrue(sourced.stream().filter(block -> "yaml".equals(block.language()))
-                        .anyMatch(block -> block.source().endsWith("ci.yml")),
-                "the CI workflow is quoted");
+        assertTrue(topic.sections().stream()
+                        .filter(section -> section.id().equals("ci-cd"))
+                        .flatMap(section -> section.blocks().stream())
+                        .allMatch(block -> block instanceof guide.content.TextBlock),
+                "the CI/CD section teaches conceptually in prose — no workflow file exists to quote");
         assertTrue(sourced.stream().filter(block -> "yaml".equals(block.language()))
                         .anyMatch(block -> block.source().endsWith("application.yml")),
                 "application.yml is quoted (probes, graceful shutdown, lifecycle)");

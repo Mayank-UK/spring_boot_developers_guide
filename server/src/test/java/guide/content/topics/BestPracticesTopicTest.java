@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  * pointing at existing exemplars: AppConfig, CreatePost, FailureKind,
  * AuthenticateCredentials, PgPostRepository, PostRepository, BreakerPort,
  * RequestLoggingFilter, CompressionBenchmark, Result, the checklist engine
- * and the client demo; yaml from application.yml + deploy/k8s + CI; xml
+ * and the client demo; yaml from application.yml + deploy/k8s; xml
  * from the pom. The curl tour rides as an exempt bash block, never a
  * fabricated source.
  */
@@ -135,9 +135,8 @@ class BestPracticesTopicTest {
                 "the pom parent (version management) is quoted in setup");
         assertTrue(sourced.stream().filter(block -> "yaml".equals(block.language()))
                         .allMatch(block -> block.source().endsWith("application.yml")
-                                || block.source().endsWith("deploy/k8s/deployment.yml")
-                                || block.source().endsWith(".github/workflows/ci.yml")),
-                "every yaml block comes from the real configuration, the k8s manifest, or CI");
+                                || block.source().endsWith("deploy/k8s/deployment.yml")),
+                "every yaml block comes from the real configuration or the k8s manifest");
         assertTrue(sourced.stream().anyMatch(block -> "ts".equals(block.language())
                         && block.source().endsWith("checklist_demo.tsx")),
                 "the client demo is quoted from the live demo (ts)");

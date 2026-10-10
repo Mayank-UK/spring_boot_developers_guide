@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * that claims passes it cannot see is the anti-pattern the topic teaches),
  * the shape of every category, one live verdict's evidence read from the
  * REAL taxonomy, one property verdict from the REAL config, and one verify
- * row carrying a runnable curl.
+ * row carrying a runnable command.
  */
 @WebMvcTest(BestPracticesDemoController.class)
 @Import(BestPracticesDemoConfig.class)
@@ -112,7 +112,7 @@ class BestPracticesDemoControllerTest {
                 .andExpect(jsonPath("$.items[?(@.id == 'parameterized-sql')].verify")
                         .value(Matchers.hasItem(
                                 Matchers.containsString("curl -s -X POST localhost:8080/api/demo/db/sql/safety"))))
-                .andExpect(jsonPath("$.items[?(@.id == 'ci-green')].verify")
-                        .value(Matchers.hasItem(Matchers.containsString("actions/runs"))));
+                .andExpect(jsonPath("$.items[?(@.id == 'suite-green')].verify")
+                        .value(Matchers.hasItem(Matchers.containsString("mvn -q test"))));
     }
 }

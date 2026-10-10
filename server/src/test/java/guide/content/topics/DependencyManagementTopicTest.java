@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
  * the deps:manifest demo is mounted INLINE inside the tree-and-enforcer
  * section where mediation and the drift guard are taught, and every
  * must-source block carries a real repo source path — the pom is quoted as
- * xml, the Dockerfile as dockerfile, CI as yaml, the probe/sync-test as
+ * xml, both prod Dockerfiles as dockerfile, the probe/sync-test as
  * java, and the client demo as ts.
  */
 class DependencyManagementTopicTest {
@@ -70,7 +70,7 @@ class DependencyManagementTopicTest {
     }
 
     @Test
-    void theRealPomDockerfileAndCiAreQuotedAsSourcedBlocks() {
+    void theRealPomDockerfileAndTestsAreQuotedAsSourcedBlocks() {
         Topic topic = registry.getTopicById("dependency-management").orElseThrow();
         List<CodeBlock> sourced = topic.sections().stream()
                 .flatMap(section -> section.blocks().stream())
@@ -84,8 +84,9 @@ class DependencyManagementTopicTest {
         assertTrue(sourced.stream().anyMatch(block -> "xml".equals(block.language())
                         && block.source().endsWith("server/pom.xml")),
                 "the pom itself is quoted as xml");
-        assertTrue(sourced.stream().anyMatch(block -> "dockerfile".equals(block.language())));
-        assertTrue(sourced.stream().anyMatch(block -> "yaml".equals(block.language())));
+        assertTrue(sourced.stream().anyMatch(block -> "dockerfile".equals(block.language())
+                        && block.source().endsWith("Dockerfile.server.prod")),
+                "the layered-jar build and COPY order are quoted from the prod server image");
         assertTrue(sourced.stream().anyMatch(block -> "java".equals(block.language())
                         && block.source().endsWith("RuntimeVersionProbe.java")),
                 "the two-tier probe is quoted where runtime truth is taught");
