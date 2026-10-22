@@ -1,0 +1,30 @@
+# TEMPORARY probe (delete after): which mongo images boot on this runner's
+# kernel? GitHub's fleet upgrade to kernel 6.19+/7.0 made stock mongo:8
+# refuse to start (SERVER-121912). Dispatch-only — fires nothing on push.
+name: Mongo kernel probe
+on:
+    workflow_dispatch:
+jobs:
+    probe:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Probe candidate mongo images
+              shell: bash
+              run: |
+                  set -u
+                  echo "kernel: $(uname -r)"
+                  for img in mongo:8.0 mongo:8.0.10 mongo:8.0.12 mongo:8.2 mongo:9.0 mongo:7.0; do
+                    cid=$(docker run -d --rm "$img" 2>/dev/null)
+                    if [ -z "$cid" ]; then echo "$img: RUN-FAIL"; continue; fi
+                    verdict=TIMEOUT
+                    for i in $(seq 1 30); do
+                      st=$(docker inspect -f '{{.State.Status}}/{{.State.ExitCode}}' "$cid" 2>/dev/null)
+                      case "$st" in
+                        running) if docker logs "$cid" 2>&1 | grep -q '"msg":"Waiting for connections"'; then verdict=BOOTED; break; fi ;;
+                        exited/*) verdict="EXITED-$st"; break ;;
+                      esac
+                      sleep 2
+                    done
+                    echo "$img: $verdict"
+                    docker rm -f "$cid" >/dev/null 2>&1
+                  done
