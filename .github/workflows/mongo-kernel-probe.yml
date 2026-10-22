@@ -13,6 +13,12 @@ jobs:
               run: |
                   set -u
                   echo "kernel: $(uname -r)"
+                  if python3 -c "import platform,sys;sys.exit(0 if tuple(map(int,platform.release().split('.')[:2]))>=(6,19) else 1)"; then
+                    echo "kernel class: NEW (>=6.19) — running matrix"
+                  else
+                    echo "kernel class: OLD (<6.19) — everything boots here; rerun for a discriminating sample"
+                    exit 0
+                  fi
                   for img in mongo:8.0 mongo:8.0.10 mongo:8.0.12 mongo:8.2 mongo:9.0 mongo:7.0; do
                     cid=$(docker run -d --rm "$img" 2>/dev/null)
                     if [ -z "$cid" ]; then echo "$img: RUN-FAIL"; continue; fi
