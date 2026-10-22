@@ -76,7 +76,20 @@ class ObsTracingIntegrationTest {
 
         // …and the SAME id in the log lines the hop's thread wrote
         JsonNode logs = evidence.path("logs");
-        assertTrue(logs.isArray() && logs.size() >= 1, "the hop's beat is in the ring");
+        if (!logs.isArray() || logs.size() < 1) {
+            // Self-diagnosing failure: dump the ring's tail so the CI log names the
+            // mechanism — MDC decoration dead (every traceId null), window flooded,
+            // or ring empty. Local runs never reproduce the CI-only flake.
+            JsonNode tail = getJson("/api/demo/obs/logs?limit=30").path("events");
+            StringBuilder ringTail = new StringBuilder("the hop's beat is in the ring — ring tail (newest first): ");
+            for (JsonNode event : tail) {
+                ringTail.append('[').append(event.path("level").asString()).append(' ')
+                        .append(event.path("logger").asString())
+                        .append(" traceId=").append(event.path("traceId").asString())
+                        .append(" req=").append(event.path("requestId").asString()).append("] ");
+            }
+            assertTrue(false, ringTail.toString());
+        }
         for (JsonNode log : logs) {
             assertEquals(traceId, log.path("traceId").asString(), "log line joined the trace");
         }

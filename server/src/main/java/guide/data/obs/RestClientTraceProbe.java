@@ -53,6 +53,10 @@ public final class RestClientTraceProbe implements TraceProbe {
      * response on a cold box, the same async truth the span settle handles. */
     private static final long LOG_SETTLE_MS = 2_000;
 
+    /** Scan the ring's FULL capacity (not just the newest slice): under a loaded shared runner the
+     * suite's cached contexts keep logging, and a 200-deep window can trail behind the hop's beats. */
+    private static final int RING_SCAN_LIMIT = 500;
+
     private final ObjectProvider<Tracer> tracer;
     private final ObjectProvider<RestClient.Builder> clientBuilder;
     private final ObjectProvider<WebServerApplicationContext> serverContext;
@@ -115,7 +119,7 @@ public final class RestClientTraceProbe implements TraceProbe {
 
         List<TraceSpan> timeline = awaitSettledSpans(traceId);
         awaitSettledTraceLogs(traceId);
-        List<LoggedEvent> traceLogs = ring.recent(null, 200).stream()
+        List<LoggedEvent> traceLogs = ring.recent(null, RING_SCAN_LIMIT).stream()
                 .filter(event -> traceId.equals(event.traceId()))
                 .toList();
         return Result.success(new TraceEvidence(traceId, traceparent, hop.toProof(), timeline, traceLogs));
@@ -152,7 +156,7 @@ public final class RestClientTraceProbe implements TraceProbe {
     }
 
     private long countTraceLogs(String traceId) {
-        return ring.recent(null, 200).stream()
+        return ring.recent(null, RING_SCAN_LIMIT).stream()
                 .filter(event -> traceId.equals(event.traceId()))
                 .count();
     }
