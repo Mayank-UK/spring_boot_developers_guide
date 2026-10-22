@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -39,7 +41,9 @@ class MongoDemoIntegrationTest {
 
     @Container
     @ServiceConnection
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8")
+            .waitingFor(Wait.forLogMessage(".*Waiting for connections.*", 1))
+            .withStartupTimeout(Duration.ofMinutes(2));
 
     @Autowired
     private MockMvc mockMvc;

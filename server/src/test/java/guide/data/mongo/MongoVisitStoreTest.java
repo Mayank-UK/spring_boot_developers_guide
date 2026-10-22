@@ -13,6 +13,7 @@ import guide.core.result.Result;
 import guide.core.result.Success;
 import guide.domain.mongo.VisitDocument;
 import guide.domain.mongo.VisitDraft;
+import java.time.Duration;
 import java.util.List;
 import org.bson.Document;
 import org.junit.jupiter.api.AfterAll;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -46,7 +48,9 @@ class MongoVisitStoreTest {
 
     /** The NEW 2.x container class (org.testcontainers.mongodb) — flagged rename, verified API. */
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8");
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8")
+            .waitingFor(Wait.forLogMessage(".*Waiting for connections.*", 1))
+            .withStartupTimeout(Duration.ofMinutes(2));
 
     private static final String DATABASE = "guide";
 
