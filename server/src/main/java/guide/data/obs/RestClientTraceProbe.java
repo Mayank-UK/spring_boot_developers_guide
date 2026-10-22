@@ -49,6 +49,10 @@ public final class RestClientTraceProbe implements TraceProbe {
     /** How long to wait (polling) for finished spans to reach the timeline — reporting is async on the hop's thread. */
     private static final long SPAN_SETTLE_MS = 2_000;
 
+    /** How long to wait (polling) for the hop's log beats to reach the ring — appends can trail the
+     * response on a cold box, the same async truth the span settle handles. */
+    private static final long LOG_SETTLE_MS = 2_000;
+
     private final ObjectProvider<Tracer> tracer;
     private final ObjectProvider<RestClient.Builder> clientBuilder;
     private final ObjectProvider<WebServerApplicationContext> serverContext;
@@ -110,6 +114,7 @@ public final class RestClientTraceProbe implements TraceProbe {
         }
 
         List<TraceSpan> timeline = awaitSettledSpans(traceId);
+        awaitSettledTraceLogs(traceId);
         List<LoggedEvent> traceLogs = ring.recent(null, 200).stream()
                 .filter(event -> traceId.equals(event.traceId()))
                 .toList();
@@ -129,6 +134,27 @@ public final class RestClientTraceProbe implements TraceProbe {
             settled = spans.recentFor(traceId);
         }
         return settled;
+    }
+
+    /** The hop's log beats can land after its response is already on the wire (the ring appends ride
+     * the logging thread): poll briefly for the first trace-tagged line — the same settle-then-snapshot
+     * posture as the spans — so the evidence never ships an empty log section to a fast reader. A real
+     * propagation break still fails: after the budget the snapshot below stays empty. */
+    private void awaitSettledTraceLogs(String traceId) {
+        for (long waited = 0; countTraceLogs(traceId) == 0 && waited < LOG_SETTLE_MS; waited += 50) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+
+    private long countTraceLogs(String traceId) {
+        return ring.recent(null, 200).stream()
+                .filter(event -> traceId.equals(event.traceId()))
+                .count();
     }
 
     /** Mirror of the hop endpoint's response (Jackson fills it from the JSON the wire carried). */
