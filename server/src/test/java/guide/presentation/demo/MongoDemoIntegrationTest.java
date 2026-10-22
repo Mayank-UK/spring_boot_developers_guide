@@ -42,8 +42,8 @@ class MongoDemoIntegrationTest {
     @Container
     @ServiceConnection
     static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8")
-            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(768 * 1024 * 1024L)
-                    .withMemorySwap(768 * 1024 * 1024L))
+            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(1536 * 1024 * 1024L)
+                    .withMemorySwap(1536 * 1024 * 1024L))
             .waitingFor(Wait.forLogMessage(".*Waiting for connections.*", 1))
             .withStartupTimeout(Duration.ofMinutes(2));
 

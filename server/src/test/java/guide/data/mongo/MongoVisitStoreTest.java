@@ -47,13 +47,13 @@ import org.testcontainers.mongodb.MongoDBContainer;
 class MongoVisitStoreTest {
 
     /** The NEW 2.x container class (org.testcontainers.mongodb) — flagged rename, verified API.
-     * Hard memory cap: mongo sizes its wiredTiger cache from AVAILABLE memory, so an uncapped
+     * Hard memory cap (1.5GB — 768MB proved borderline on shared runners, flaking between runs): mongo sizes its wiredTiger cache from AVAILABLE memory, so an uncapped
      * container on a shared 7GB CI runner targets ~3.5GB and the OOM killer reaps mongod
      * mid-suite (observed as startup failure / mid-test connection refused). */
     @Container
     static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8")
-            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(768 * 1024 * 1024L)
-                    .withMemorySwap(768 * 1024 * 1024L))
+            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(1536 * 1024 * 1024L)
+                    .withMemorySwap(1536 * 1024 * 1024L))
             .waitingFor(Wait.forLogMessage(".*Waiting for connections.*", 1))
             .withStartupTimeout(Duration.ofMinutes(2));
 
