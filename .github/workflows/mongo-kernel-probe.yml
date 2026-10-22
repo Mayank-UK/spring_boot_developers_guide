@@ -20,7 +20,7 @@ jobs:
                     for i in $(seq 1 30); do
                       st=$(docker inspect -f '{{.State.Status}}/{{.State.ExitCode}}' "$cid" 2>/dev/null)
                       case "$st" in
-                        running) if docker logs "$cid" 2>&1 | grep -q '"msg":"Waiting for connections"'; then verdict=BOOTED; break; fi ;;
+                        running*) if docker logs "$cid" 2>&1 | grep -q 'Waiting for connections'; then verdict=BOOTED; break; fi ;;
                         exited/*) verdict="EXITED-$st"; break ;;
                       esac
                       sleep 2
