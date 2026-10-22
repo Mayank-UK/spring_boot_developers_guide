@@ -9,6 +9,7 @@ import guide.domain.jobs.JobQueue;
 import guide.domain.jobs.JobWorker;
 import guide.domain.obs.EmitDemoLog;
 import guide.domain.obs.LogRing;
+import guide.domain.obs.LoggedEvent;
 import guide.domain.obs.ObsMetrics;
 import guide.domain.obs.ReadLogRing;
 import guide.domain.obs.RunTracedHop;
@@ -20,6 +21,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.micrometer.tracing.Tracer;
+import java.util.List;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -70,9 +72,21 @@ public class ObservabilityDemoConfig {
      * The ring of record: the appender logback-spring.xml attaches, found by
      * name; if nothing processed that file (a slice), a standalone appender
      * is created and attached to the root logger so the viewer still works.
+     *
+     * The bean DELIBERATELY resolves the attached appender on every read
+     * instead of capturing it once: a later context in the same JVM (several
+     * @SpringBootTest contexts in one suite) can re-run Boot's logging
+     * listener, which RESETS the logback LoggerContext — the XML's OBS_RING
+     * appender is recreated and a previously captured instance is left
+     * detached, reading an orphaned ring. Delegating per call keeps this
+     * bean a view of the LIVE appender across any such reset.
      */
     @Bean
     LogRing logRing() {
+        return new AttachedLogRing(findOrAttachRingAppender());
+    }
+
+    private LogRingAppender findOrAttachRingAppender() {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         var root = context.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
         var configured = root.getAppender("OBS_RING");
@@ -85,6 +99,33 @@ public class ObservabilityDemoConfig {
         fallback.start();
         root.addAppender(fallback);
         return fallback;
+    }
+
+    /** Reads always go to the appender CURRENTLY attached as OBS_RING (the constructor
+     * argument is the fallback for contexts where the XML appender never existed). */
+    private record AttachedLogRing(LogRingAppender fallback) implements LogRing {
+
+        private LogRing live() {
+            var root = ((LoggerContext) LoggerFactory.getILoggerFactory())
+                    .getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+            var attached = root.getAppender("OBS_RING");
+            return attached instanceof LogRingAppender ring ? ring : fallback;
+        }
+
+        @Override
+        public List<LoggedEvent> recent(String level, int limit) {
+            return live().recent(level, limit);
+        }
+
+        @Override
+        public int size() {
+            return live().size();
+        }
+
+        @Override
+        public int capacity() {
+            return live().capacity();
+        }
     }
 
     /**
