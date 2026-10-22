@@ -259,10 +259,13 @@ jobs:
                       # only demo visit telemetry (optional-service, TTL'd,
                       # reseeded on demand), so reset it ONCE and let 8.0.12
                       # initialize FCV 8.0. The marker makes this idempotent.
-                      if [ ! -f "$STATE_DIR/mongo-volume-reset-to-8.0" ]; then
+                      if [ ! -f "$STATE_DIR/mongo-volume-reset-8.0-done" ]; then
                         docker rm -f sbdg_mongo >/dev/null 2>&1 || true
                         docker volume rm sbdg_prod_mongo_data >/dev/null 2>&1 || true
-                        touch "$STATE_DIR/mongo-volume-reset-to-8.0"
+                        # Re-create it empty: the compose file declares it
+                        # external: true, so compose looks it up, never creates.
+                        docker volume create sbdg_prod_mongo_data >/dev/null
+                        touch "$STATE_DIR/mongo-volume-reset-8.0-done"
                       fi
 
                       # ── 2. Active color + persistent platform stack ─────────────
