@@ -184,6 +184,16 @@ jobs:
             - name: Tear down the CI stacks
               if: always()
               run: |
+                  set -euo pipefail
+                  # The rails interpolate on `down` too (SPRING_DATASOURCE_PASSWORD
+                  # lives in the platform file) — source the placeholder env so
+                  # teardown always runs, even after a failed boot step.
+                  if [ ! -f server/.env.production ]; then
+                    cp server/.env.production.example server/.env.production
+                  fi
+                  set -a
+                  . server/.env.production
+                  set +a
                   docker compose -f .docker/docker-compose-prod.yml \
                     -f .docker/docker-compose.ci.yml down -v --remove-orphans
                   docker compose -f .docker/docker-compose-platform.yml down -v --remove-orphans

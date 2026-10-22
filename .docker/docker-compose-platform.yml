@@ -87,10 +87,13 @@ services:
       - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      # Generous budget: a cold mongo:8 first boot on a loaded shared runner
+      # (CI e2e job) can outlast the family-default 10s/5x10s window and
+      # fail `up --wait` before mongod ever answers.
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 60s
     networks:
       sbdg_backend:
         aliases:
