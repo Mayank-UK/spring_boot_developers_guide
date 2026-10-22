@@ -249,6 +249,22 @@ jobs:
                           docker volume create "$volume"
                       done
 
+                      # ── 1.5 ONE-TIME mongo volume reset (marker-gated) ─────────
+                      # The volume was first initialized by the UNPINNED mongo:8
+                      # tag, which resolves to v8.3.x and stamps
+                      # featureCompatibilityVersion "8.3" — the pinned
+                      # mongo:8.0.12 binary refuses it (SERVER-121912-adjacent
+                      # pin fallout: fatal "Wrong mongod version", exit 62,
+                      # ~2s crash-loop that fails `up --wait`). The volume holds
+                      # only demo visit telemetry (optional-service, TTL'd,
+                      # reseeded on demand), so reset it ONCE and let 8.0.12
+                      # initialize FCV 8.0. The marker makes this idempotent.
+                      if [ ! -f "$STATE_DIR/mongo-volume-reset-to-8.0" ]; then
+                        docker rm -f sbdg_mongo >/dev/null 2>&1 || true
+                        docker volume rm sbdg_prod_mongo_data >/dev/null 2>&1 || true
+                        touch "$STATE_DIR/mongo-volume-reset-to-8.0"
+                      fi
+
                       # ── 2. Active color + persistent platform stack ─────────────
                       HAD_ACTIVE_COLOR=0
                       ACTIVE_COLOR=""
