@@ -80,14 +80,14 @@ services:
           - redis
 
   mongo:
-    image: mongo:8
+    image: mongo:8.0.12
     container_name: sbdg_mongo
     restart: unless-stopped
     volumes:
       - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
-      # Generous budget: a cold mongo:8 first boot on a loaded shared runner
+      # Generous budget: a cold mongo:8.0.12 first boot on a loaded shared runner
       # (CI e2e job) can outlast the family-default 10s/5x10s window and
       # fail `up --wait` before mongod ever answers.
       interval: 10s

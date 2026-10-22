@@ -13,7 +13,6 @@ import guide.core.result.Result;
 import guide.core.result.Success;
 import guide.domain.mongo.VisitDocument;
 import guide.domain.mongo.VisitDraft;
-import java.time.Duration;
 import java.util.List;
 import org.bson.Document;
 import org.junit.jupiter.api.AfterAll;
@@ -23,14 +22,13 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
 
 /**
- * MongoVisitStore against REAL MongoDB (Testcontainers, mongo:8 — the same
- * image the compose files run). No Spring context: the template is built
+ * MongoVisitStore against REAL MongoDB (Testcontainers, mongo:8.0.12 —
+ * the same image the prod stack pins). No Spring context: the template is built
  * straight from the container's connection string, mirroring
  * PgPostRepositoryTest's shape. Docker is REQUIRED; no skips-green-here.
  *
@@ -46,16 +44,8 @@ import org.testcontainers.mongodb.MongoDBContainer;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class MongoVisitStoreTest {
 
-    /** The NEW 2.x container class (org.testcontainers.mongodb) — flagged rename, verified API.
-     * Hard memory cap (1.5GB — 768MB proved borderline on shared runners, flaking between runs): mongo sizes its wiredTiger cache from AVAILABLE memory, so an uncapped
-     * container on a shared 7GB CI runner targets ~3.5GB and the OOM killer reaps mongod
-     * mid-suite (observed as startup failure / mid-test connection refused). */
     @Container
-    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8")
-            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(1536 * 1024 * 1024L)
-                    .withMemorySwap(1536 * 1024 * 1024L))
-            .waitingFor(Wait.forLogMessage(".*Waiting for connections.*", 1))
-            .withStartupTimeout(Duration.ofMinutes(2));
+    static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0.12");
 
     private static final String DATABASE = "guide";
 
