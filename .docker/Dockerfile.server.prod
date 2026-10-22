@@ -10,6 +10,12 @@ RUN mvn -q -DskipTests package \
 
 FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
+# Healthcheck probe binary: the JRE base ships neither curl nor wget, and the
+# prod app stack's compose healthcheck needs one — a small layer, cached
+# across builds like every other base-image addition.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
 # Layer order matters: least-changed first. The extracted layout is launched
 # by the Boot loader's main class from the merged /app directory.
 COPY --from=build /srv/target/extracted/dependencies/ ./
@@ -18,3 +24,10 @@ COPY --from=build /srv/target/extracted/snapshot-dependencies/ ./
 COPY --from=build /srv/target/extracted/application/ ./
 EXPOSE 8080
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+# Boot 4.1's layered-extract layout is a THIN app jar (its own Main-Class,
+# Class-Path pointing at the sibling lib/ directory) with an EMPTY loader
+# directory — JarLauncher above no longer exists in the extracted tree, so
+# this later ENTRYPOINT (the last one wins) launches the thin jar directly.
+# The glob keeps working when the pom version moves; exec keeps signals
+# (docker stop → SIGTERM) flowing to the JVM, not the shell.
+ENTRYPOINT ["/bin/sh", "-c", "exec java -jar server-*.jar"]

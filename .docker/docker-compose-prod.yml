@@ -1,0 +1,100 @@
+# PER-RELEASE APP STACK — booted per deploy under the project of one color:
+#   COLOR=blue  IMAGE_TAG=sha-abc1234 docker compose -p sbdg_blue  -f <this file> up -d --wait
+#   COLOR=green IMAGE_TAG=sha-def5678 docker compose -p sbdg_green -f <this file> up -d --wait
+# The deploy script ALWAYS exports COLOR deliberately; the ${COLOR:-blue}
+# default below only exists so a bare local `up` boots something (blue).
+# There is deliberately NO top-level name: the -p flag names the project,
+# and the two colors must never share one.
+#
+# The persistent platform (postgres + redis + mongo, project sbdg_platform)
+# lives in docker-compose-platform.yml and is booted BEFORE any app stack:
+# depends_on cannot cross compose files, so the boot race is won by deploy
+# ORDERING (platform `up -d --wait` fully healthy first). The app_internal
+# network is project-scoped ON PURPOSE: each color's `server` service-name
+# DNS resolves only within its own color, so nginx's baked
+# `proxy_pass http://server:8080` always reaches the SAME color's API,
+# never the other release's.
+#
+# SECRETS arrive from ONE file: server/.env.production (SDG_JWT_SECRET +
+# SPRING_DATASOURCE_PASSWORD, never in git). The server consumes it via
+# env_file; the platform's postgres consumes the same SPRING_DATASOURCE_
+# PASSWORD via interpolation once the deploy/CI shell sources the file —
+# one value, two doors, no duplication.
+services:
+  server:
+    image: "ghcr.io/mayank-uk/springboot-guide-server:${IMAGE_TAG:?IMAGE_TAG is required}"
+    container_name: sbdg_server_${COLOR:-blue}
+    restart: unless-stopped
+    # No published ports — the API stays internal; nginx's /api proxy is the
+    # only caller. Debug hatch (loopback): - "127.0.0.1:8080:8080"
+    env_file:
+      - ./../server/.env.production
+    environment:
+      # environment: beats env_file:, so these win over any .env.production
+      # values. The platform datastores are reachable by their network
+      # ALIASES on the shared sbdg_backend network — the same service-name
+      # shape the dev stack's environment carries.
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/guide
+      - SPRING_DATASOURCE_USERNAME=guide
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/guide
+      - SPRING_DATA_REDIS_HOST=redis
+    # The secrets (SDG_JWT_SECRET / SPRING_DATASOURCE_PASSWORD) ride the
+    # env_file ONLY: ProdSanityConfig refuses to boot the prod profile on
+    # dev-grade values a second time at startup — two independent doors,
+    # both closed.
+    healthcheck:
+      # 127.0.0.1, not localhost. curl is installed in the image's runtime
+      # stage (the JRE base ships neither curl nor wget).
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Generous on purpose: a Spring Boot cold boot on a fresh volume
+      # (44 topics of content, Flyway + datastore wiring) takes longer
+      # than the first healthcheck interval.
+      start_period: 90s
+    networks:
+      - app_internal
+      - sbdg_backend
+
+  client:
+    image: "ghcr.io/mayank-uk/springboot-guide-client:${IMAGE_TAG:?IMAGE_TAG is required}"
+    container_name: sbdg_client_${COLOR:-blue}
+    restart: unless-stopped
+    # No published ports — Caddy is the front door (TLS on :443) and reaches
+    # this container BY NAME (sbdg_client_<color>) on the shared sbdg_frontend
+    # network; nginx is the internal app server behind it. Debug hatch
+    # (loopback, non-TLS): - "127.0.0.1:8080:80"
+    networks:
+      - app_internal
+      - sbdg_frontend
+    depends_on:
+      # Long form: the app tier waits for its API — same color, same
+      # project, so the gate still works per release.
+      server:
+        condition: service_healthy
+    healthcheck:
+      # Prove the app tier answers, independent of the API gate. nginx:alpine
+      # ships busybox wget.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  # Plain project-scoped network: sbdg_blue_app_internal / sbdg_green_app_internal.
+  # THIS is the isolation unit — nginx's `proxy_pass http://server:8080` and
+  # this file's depends_on resolve `server` inside the color's own network.
+  app_internal: {}
+  # Shared with the platform stack (external, created by the deploy): caddy
+  # reaches sbdg_client_<color> here.
+  sbdg_frontend:
+    name: sbdg_frontend
+    external: true
+  # Shared with the platform stack: postgres + redis + mongo live here by
+  # alias.
+  sbdg_backend:
+    name: sbdg_backend
+    external: true

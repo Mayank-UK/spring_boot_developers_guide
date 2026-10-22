@@ -1,0 +1,115 @@
+# PERSISTENT PLATFORM STACK — booted once and untouched by releases.
+#
+# Project sbdg_platform owns everything that OUTLIVES a deployment: the three
+# datastores (postgres, redis, mongo), same images/env/healthchecks as the dev
+# stack and the old self-contained prod stack (docker-compose.prod.yml)
+# carried. The TLS edge is NOT in this file — it is the infra repo's ONE
+# shared `caddy` container (its own compose project at /opt/caddy on the VM,
+# the only publisher of 80/443, serving every app on the box), which joins
+# the external sbdg_frontend network to reach this app's sbdg_client_<color>
+# containers by name. The seam between the stacks is the FLIP FILE
+# ~/spring_boot_developers_guide/platform/upstream.caddy (one line:
+# reverse_proxy sbdg_client_<color>:80): the deploy writes it, the shared
+# caddy bind-mounts it read-only, and a release activates the flip with
+# `docker exec caddy caddy reload --config /etc/caddy/Caddyfile` — graceful,
+# no TLS blip.
+#
+# The datastore boot-race guarantee is enforced by DEPLOY ORDERING here:
+# `up -d --wait` must report all three datastores healthy BEFORE any app
+# stack starts — depends_on cannot cross compose files. The server itself
+# boots with a datastore down (the optional-service discipline), but a
+# Spring Boot boot against a missing datasource races HikariCP init —
+# platform-first ordering closes that window on every deploy.
+#
+# Volumes are EXTERNAL on purpose (sbdg_prod_*): the deploy creates them
+# idempotently before the first boot and they survive every release flip —
+# the databases are platform state, never per-color state.
+#
+# SINGLE-SOURCE SECRET WIRING: the app stack's server consumes
+# SPRING_DATASOURCE_PASSWORD via its env_file (server/.env.production) and
+# the postgres service below consumes the SAME name via interpolation — the
+# deploy/CI shell runs `set -a; . server/.env.production; set +a` before any
+# compose command against this file, so ONE variable feeds both sides and
+# the database and the app cannot disagree on the password.
+name: sbdg_platform
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: sbdg_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=guide
+      # Parity rail: the SAME variable the app stacks' server consumes via
+      # env_file (SPRING_DATASOURCE_PASSWORD) — the DB and the app agree by
+      # construction, and an unset value fails `compose config` up front.
+      # The deploy/CI shell supplies it by sourcing server/.env.production.
+      - POSTGRES_PASSWORD=${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD must be set to a real database password}
+      - POSTGRES_DB=guide
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guide -d guide"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      sbdg_backend:
+        # The alias keeps the app stacks' SPRING_DATASOURCE_URL hostname
+        # (jdbc:postgresql://postgres:5432/guide) resolving without knowing
+        # this stack's service names.
+        aliases:
+          - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: sbdg_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      sbdg_backend:
+        aliases:
+          - redis
+
+  mongo:
+    image: mongo:8
+    container_name: sbdg_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      sbdg_backend:
+        aliases:
+          - mongo
+
+networks:
+  sbdg_backend:
+    name: sbdg_backend
+    external: true
+
+volumes:
+  # Created idempotently by the deploy (external: compose looks them up,
+  # never creates them) — platform data survives every release flip.
+  postgres_data:
+    name: sbdg_prod_postgres_data
+    external: true
+  redis_data:
+    name: sbdg_prod_redis_data
+    external: true
+  mongo_data:
+    name: sbdg_prod_mongo_data
+    external: true

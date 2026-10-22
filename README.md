@@ -98,6 +98,8 @@ deploy/k8s/     the real manifests the deployment topic teaches
 .devcontainer/  VS Code devcontainer, attaching to the compose `dev` service
 ```
 
-## CI
+## CI/CD
 
-None, by choice. The gate is the local docker verify above — the same commands a hosted pipeline's stages would run; the testing and deployment topics teach CI/CD conceptually on top of that contract.
+GitHub Actions, restored 2026-10-22 (hosted CI had been removed on 2026-10-10; the developer asked for it back). [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to master and every PR: the server suite as `mvn -B verify` (the same untrimmed gate as the local docker verify — Testcontainers, JaCoCo floors, enforcer; expect ~40+ min), the client suite + build, a gitleaks scan, and an image-smoke e2e job that builds both production images, boots them beside the platform datastores exactly as the deploy does, and drives the real UI with Playwright. Master pushes also publish attested (provenance + SBOM) images to GHCR for the VM's architecture. [`.github/workflows/deploy-production.yml`](.github/workflows/deploy-production.yml) blue/green-deploys a master commit (or a dispatched `sha-<7>` tag) to the VM: platform datastores first, the inactive color booted and probed privately, then a zero-downtime caddy flip with instant rollback on a failed public health gate.
+
+The local docker verify above remains the first-line gate — CI runs the same contract on a clean runner. The `.docker/` platform/prod/ci compose trio that CI and the deploy consume (`docker-compose-platform.yml`, `docker-compose-prod.yml`, `docker-compose.ci.yml`) is separate from the legacy self-contained `docker-compose.prod.yml` teaching stack.

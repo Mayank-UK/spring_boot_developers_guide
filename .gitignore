@@ -3,8 +3,14 @@ target/
 # JS installs & build output
 node_modules/
 dist/
-# Env files stay out of git
+# Env files stay out of git — EXCEPT the two committed non-secrets: the
+# placeholder template the deploy materializes the real file from, and the
+# single non-sensitive compose interpolation variable (IMAGE_TAG=ci).
+# Negations must come after the rule; the parent dirs are not excluded, so
+# re-including files under them works.
 .env*
+!server/.env.production.example
+!.docker/.env
 # Test coverage (JaCoCo / Vitest HTML reports)
 coverage/
 # Topic 26 (files-media): the file store's runtime home — uploaded bytes and
