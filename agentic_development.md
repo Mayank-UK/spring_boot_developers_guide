@@ -51,6 +51,8 @@
   SecurityConfig, …) pre-edit; stale-Edit → re-Read + re-apply; transient red under load → rerun once. Serialize server + client suites; docker -v absolute paths ALWAYS;
   rename workspace dirs BETWEEN sessions only; full suites via run_in_background + poll (subagents die after 600s idle); STOP the dev stack between sessions. Domain
   mayankcodeworks.com (old URLs 301); Umami live (VITE_UMAMI_* repo-level GH vars; events topic-open/copy-code).
+- devlog.md: recreated 2026-10-24 as this file's archive during the fleet-wide lean-out (the 2026-10-06 "no devlog" instruction predates it) — pending developer confirmation; do not
+  delete without moving the archived detail elsewhere.
 
 ## Active tasks
 - ⏳ Phase 13c selective remainder (resume ONLY on explicit developer request, ranked): @Valid rollout on state-mutating bodies ONLY (posts writes, uploads, jobs enqueue; NEVER
