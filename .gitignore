@@ -3,14 +3,17 @@ target/
 # JS installs & build output
 node_modules/
 dist/
-# Env files stay out of git — EXCEPT the two committed non-secrets: the
-# placeholder template the deploy materializes the real file from, and the
-# single non-sensitive compose interpolation variable (IMAGE_TAG=ci).
+# Env files stay out of git — EXCEPT the three committed non-secrets: the
+# placeholder template the deploy materializes the real file from, the
+# single non-sensitive compose interpolation variable (IMAGE_TAG=ci), and
+# the client build-env template (Vite Umami vars — placeholders only,
+# public by design; see client/src/ui/analytics/analytics.ts).
 # Negations must come after the rule; the parent dirs are not excluded, so
 # re-including files under them works.
 .env*
 !server/.env.production.example
 !.docker/.env
+!client/.env.example
 # Test coverage (JaCoCo / Vitest HTML reports)
 coverage/
 # Topic 26 (files-media): the file store's runtime home — uploaded bytes and

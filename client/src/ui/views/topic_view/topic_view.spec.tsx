@@ -18,6 +18,8 @@ beforeAll(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  delete window.umami;
 });
 
 function renderTopic(topicId: string) {
@@ -152,6 +154,47 @@ describe('TopicView', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Could not reach the server.');
     expect(alert).toHaveTextContent('network_error · status 0');
+  });
+
+  it('reports topic-open with the served topic id exactly once per loaded topic', async () => {
+    // Analytics only exists when the build baked both VITE_UMAMI_* vars in
+    // — stub the pair and install the beacon global to observe the calls.
+    vi.stubEnv('VITE_UMAMI_SRC', 'https://umami.example.com/script.js');
+    vi.stubEnv('VITE_UMAMI_ID', 'e6c1f2a3-8b4d-4c9e-9f0a-1b2c3d4e5f67');
+    const track = vi.fn();
+    window.umami = { track };
+
+    stubApiFetch([{ url: '/api/content/demo-topic', body: richTopic }]);
+    renderTopic('demo-topic');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Demo Topic' }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledTimes(1),
+    );
+    expect(track).toHaveBeenCalledWith('topic-open', { topic: 'demo-topic' });
+  });
+
+  it('never reports topic-open for a topic that fails to load', async () => {
+    vi.stubEnv('VITE_UMAMI_SRC', 'https://umami.example.com/script.js');
+    vi.stubEnv('VITE_UMAMI_ID', 'e6c1f2a3-8b4d-4c9e-9f0a-1b2c3d4e5f67');
+    const track = vi.fn();
+    window.umami = { track };
+
+    stubApiFetch([
+      {
+        url: '/api/content/missing',
+        status: 404,
+        body: { error: { code: 'not_found', message: 'no topic', requestId: 'req-1' } },
+      },
+    ]);
+    renderTopic('missing');
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    // The settled screen proves the load finished as an error — no event.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(track).not.toHaveBeenCalled();
   });
 
   it('is race-safe on route param changes: a slow stale fetch never overwrites the new topic', async () => {

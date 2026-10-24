@@ -1,7 +1,8 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { ThemeToggle } from './theme-toggle';
 import { RoutePaths } from '../routing/routes';
+import { initAnalytics } from '../analytics/analytics';
 
 /**
  * RootLayout — the single shared app shell: a quiet header (guide name as a
@@ -21,6 +22,15 @@ import { RoutePaths } from '../routing/routes';
 export function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Umami beacon: injected once per document from the app shell's mount
+  // effect. Idempotent (StrictMode's dev double-mount and remounts never
+  // stack a second script) and a complete no-op when the env vars are
+  // unset — dev, test, and CI builds without the build args never see a
+  // script tag.
+  useEffect(() => {
+    initAnalytics();
+  }, []);
 
   // The back arrow is hidden exactly on home; every other route (including
   // the catch-all not-found) shows it.

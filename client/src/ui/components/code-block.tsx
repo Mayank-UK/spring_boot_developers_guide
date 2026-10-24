@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { trackEvent } from '../analytics/analytics';
 
 interface CodeBlockProps {
   code: string;
@@ -43,6 +44,11 @@ export function CodeBlock({
   const handleCopy = async (event: React.MouseEvent) => {
     event.stopPropagation();
     if (!(await copyToClipboard(code))) return;
+    // Analytics: only actual copies are counted (the write resolved). The
+    // property is the current route path (e.g. '/topics/spring-core') — it
+    // embeds the topic id, so copies join topic-open per topic in the
+    // dashboard. A no-op in unconfigured builds.
+    trackEvent('copy-code', { path: window.location.pathname });
     setCopied(true);
     if (resetTimer.current !== undefined) window.clearTimeout(resetTimer.current);
     resetTimer.current = window.setTimeout(() => setCopied(false), 1500);

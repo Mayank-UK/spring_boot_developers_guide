@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { SectionWrapper } from '../../components/section-wrapper';
 import { TextBlock } from '../../components/text-block';
 import { CodeBlock } from '../../components/code-block';
 import { DemoHost } from '../../components/demo-host/demo-host';
 import { ErrorPanel } from '../../components/error-panel';
+import { trackEvent } from '../../analytics/analytics';
 import type { ContentBlock } from '../../../domain/content/content';
 import { useTopicDetail } from './topic_view.hooks';
 
@@ -17,6 +19,19 @@ import { useTopicDetail } from './topic_view.hooks';
 export function TopicView() {
   const { topicId } = useParams<'topicId'>();
   const view = useTopicDetail(topicId);
+  const loadedTopic = view.state === 'ready' ? view.topic : undefined;
+
+  // Self-hosted analytics: report each topic once when it finishes loading
+  // — home-card clicks, direct links, and refreshes all count (a no-op
+  // unless the build baked both VITE_UMAMI_* vars in). The effect sees one
+  // stable loaded topic per load; the hook's loading/error transitions pass
+  // undefined and never report, so an unknown or failed topic id is not
+  // counted as an open.
+  useEffect(() => {
+    if (loadedTopic !== undefined) {
+      trackEvent('topic-open', { topic: loadedTopic.id });
+    }
+  }, [loadedTopic]);
 
   if (view.state === 'loading') {
     return (

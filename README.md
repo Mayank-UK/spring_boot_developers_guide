@@ -103,3 +103,24 @@ deploy/k8s/     the real manifests the deployment topic teaches
 GitHub Actions, restored 2026-10-22 (hosted CI had been removed on 2026-10-10; the developer asked for it back). [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to master and every PR: the server suite as `mvn -B verify` (the same untrimmed gate as the local docker verify — Testcontainers, JaCoCo floors, enforcer; expect ~40+ min), the client suite + build, a gitleaks scan, and an image-smoke e2e job that builds both production images, boots them beside the platform datastores exactly as the deploy does, and drives the real UI with Playwright. Master pushes also publish attested (provenance + SBOM) images to GHCR for the VM's architecture. [`.github/workflows/deploy-production.yml`](.github/workflows/deploy-production.yml) blue/green-deploys a master commit (or a dispatched `sha-<7>` tag) to the VM: platform datastores first, the inactive color booted and probed privately, then a zero-downtime caddy flip with instant rollback on a failed public health gate.
 
 The local docker verify above remains the first-line gate — CI runs the same contract on a clean runner. The `.docker/` platform/prod/ci compose trio that CI and the deploy consume (`docker-compose-platform.yml`, `docker-compose-prod.yml`, `docker-compose.ci.yml`) is separate from the legacy self-contained `docker-compose.prod.yml` teaching stack.
+
+## Analytics
+
+The site reports to a **self-hosted Umami** instance at https://umami.mayankcodeworks.com — no third-party tracker, no cookies banner needed. The beacon is env-gated: CI bakes the `VITE_UMAMI_SRC` / `VITE_UMAMI_ID` **repository Variables** (not secrets — both values are public by design, visible in the served page source anyway) into the client image as Docker build-args (see `client/src/ui/analytics/analytics.ts`). With either variable empty — the default, and always in dev/test — analytics is a complete no-op: no script is injected and nothing is sent.
+
+Custom events:
+
+| Event | Property | Trigger |
+| ----- | -------- | ------- |
+| `topic-open` | `topic` — the served topic id (e.g. `spring-core`) | a topic screen finishes loading (home-card click, direct link, or refresh) |
+| `copy-code` | `path` — the current route path (e.g. `/topics/spring-core`) | a code block's copy button succeeds |
+
+(There is deliberately no `demo-run`: demos mount inline beside their teaching sections, so there is no single user-triggered "run" action to report.)
+
+**UTM convention for share links** — tag any link you post with `utm_source` = where the link lives and `utm_medium` = `readme` \| `post` \| `social`; Umami parses the standard UTM parameters automatically:
+
+```text
+https://springbootdevelopersguide.mayankcodeworks.com/?utm_source=github&utm_medium=readme
+https://springbootdevelopersguide.mayankcodeworks.com/?utm_source=reddit&utm_medium=post
+https://springbootdevelopersguide.mayankcodeworks.com/?utm_source=dev.to&utm_medium=post
+```
