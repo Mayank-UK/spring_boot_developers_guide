@@ -55,6 +55,8 @@
   delete without moving the archived detail elsewhere.
 
 ## Active tasks
+- ✅ 2026-10-25: analytics visitor identity — beacon tag now carries data-distinct-id (localStorage 'mcw_vid': uuid w/ non-crypto fallback, storage failure → beacon still
+  injects without id; attribute set BEFORE append, Umami auto-identifies — never umami.identify()).
 - ⏳ Phase 13c selective remainder (resume ONLY on explicit developer request, ranked): @Valid rollout on state-mutating bodies ONLY (posts writes, uploads, jobs enqueue; NEVER
   inspector-type demos); CSRF on session island /api/demo/auth/session/** (client fetch + topic-23 re-teach + e2e; riskiest); e2e expansion 4-5 specs (auth, posts CRUD, 304 proof).
 - ⏸ SKIPPED per developer — do NOT re-propose unasked: full AssertJ migration; Error-Prone residual triage; ArchExemptions 6-vs-7 count + dead tagsArray().

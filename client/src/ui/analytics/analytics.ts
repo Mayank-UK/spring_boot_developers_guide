@@ -99,6 +99,38 @@ function analyticsConfig(): { readonly src: string; readonly id: string } | null
   return { src, id };
 }
 
+/** localStorage key for the persisted per-browser visitor id. */
+const VISITOR_ID_KEY = 'mcw_vid';
+
+/**
+ * Stable per-browser visitor identity for the beacon: a uuid generated on
+ * first call, persisted under 'mcw_vid', and re-read on every later visit.
+ * It rides the script tag as data-distinct-id — the Umami tracker reads
+ * that attribute at its own execution and identifies the visitor by it.
+ * ALL storage access is guarded: when localStorage is unavailable (blocked,
+ * private mode, sandboxed iframe) the beacon still injects, just without
+ * an id.
+ */
+function getDistinctId(): string | undefined {
+  try {
+    let id = localStorage.getItem(VISITOR_ID_KEY);
+    if (id === null || id === '') {
+      id =
+        typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : 'v-' +
+            Date.now() +
+            '-' +
+            Math.random().toString(36).slice(2) +
+            Math.random().toString(36).slice(2);
+      localStorage.setItem(VISITOR_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Inject the Umami beacon into <head> — once per document, only when BOTH
  * env vars are set. Called from the app shell's mount effect
@@ -118,6 +150,13 @@ export function initAnalytics(): void {
   script.defer = true;
   script.src = config.src;
   script.setAttribute('data-website-id', config.id);
+  // The tracker reads data-distinct-id off the tag at its own execution
+  // (auto-fires identify), so the attribute must exist BEFORE the append —
+  // calling umami.identify() here instead would race the async beacon.
+  const vid = getDistinctId();
+  if (vid !== undefined) {
+    script.setAttribute('data-distinct-id', vid);
+  }
   document.head.appendChild(script);
   // Async beacon: load → flush what queued during the cold-start window;
   // error (blocked/failed request) → drop the queue, never replay it.
