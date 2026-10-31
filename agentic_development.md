@@ -55,6 +55,7 @@
   delete without moving the archived detail elsewhere.
 
 ## Active tasks
+- Faro crash-telemetry beacon (client) ✅ 2026-10-31 (commit 37c080b): port of edg f498a12, client-only. Tests 344/344 + build green. Needs VITE_FARO_URL + VITE_FARO_APP=springbootdevelopersguide repo Variables.
 - Prometheus p95 histograms ✅ 2026-10-31 (commit 7aa26d8, PUSHED — CI/CD deploying): application.yml management.metrics.distribution.percentiles-histogram.http.server.requests=true — Spring Boot exports _bucket series ONLY on opt-in (live VM had just _count/_sum/_max; the Grafana App—Spring Boot p95 panel histogram_quantile'd a nonexistent metric). Ratchet-safe: SnippetMatcher is ordered-subsequence with gaps — source insertions cannot break the ~18 quotes; suite green at pinned 1173/0/1. After deploy: http_server_requests_seconds_bucket appears; p95 panel fills.
 - ✅ 2026-10-25: analytics visitor identity — beacon tag now carries data-distinct-id (localStorage 'mcw_vid': uuid w/ non-crypto fallback, storage failure → beacon still
   injects without id; attribute set BEFORE append, Umami auto-identifies — never umami.identify()).
