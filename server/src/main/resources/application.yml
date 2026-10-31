@@ -307,6 +307,19 @@ management:
     # postures, not in the aggregate health signal.
     mail:
       enabled: false
+  # Observability follow-up — FLAGGED APPEND: percentile HISTOGRAMS for the
+  # HTTP server timer. Without this line /actuator/prometheus ships only
+  # _count/_sum/_max for http_server_requests_seconds, and a p95 is NOT
+  # computable from those client-side; true makes Micrometer keep bucketed
+  # counts (http_server_requests_seconds_bucket) so Prometheus
+  # histogram_quantile() can answer p95/p99 — the series the dashboard
+  # panels are built on. Deliberately scoped to http.server.requests alone:
+  # histogram buckets cost memory per timer, the per-meter posture the
+  # metrics section teaches (never a global * wildcard).
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 # Topic 36 (environments) — FLAGGED APPEND: the app's own typed config,
 # constructor-bound into guide.core.AppConfig (a @ConfigurationProperties
