@@ -108,6 +108,8 @@ jobs:
                   build-args: |
                       VITE_UMAMI_SRC=${{ vars.VITE_UMAMI_SRC || secrets.VITE_UMAMI_SRC || '' }}
                       VITE_UMAMI_ID=${{ vars.VITE_UMAMI_ID || secrets.VITE_UMAMI_ID || '' }}
+                      VITE_FARO_URL=${{ vars.VITE_FARO_URL || secrets.VITE_FARO_URL || '' }}
+                      VITE_FARO_APP=${{ vars.VITE_FARO_APP || secrets.VITE_FARO_APP || '' }}
 
             - name: Prepare external compose resources and the env file
               run: |
@@ -330,6 +332,8 @@ jobs:
                   build-args: |
                       VITE_UMAMI_SRC=${{ vars.VITE_UMAMI_SRC || secrets.VITE_UMAMI_SRC || '' }}
                       VITE_UMAMI_ID=${{ vars.VITE_UMAMI_ID || secrets.VITE_UMAMI_ID || '' }}
+                      VITE_FARO_URL=${{ vars.VITE_FARO_URL || secrets.VITE_FARO_URL || '' }}
+                      VITE_FARO_APP=${{ vars.VITE_FARO_APP || secrets.VITE_FARO_APP || '' }}
 
     # GHCR tag retention: every master push leaves one sha-<7> version per
     # package. This job deletes sha-tagged versions beyond the newest 10 —

@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { ThemeToggle } from './theme-toggle';
 import { RoutePaths } from '../routing/routes';
 import { initAnalytics } from '../analytics/analytics';
+import { initCrashTelemetry } from '../analytics/crash-telemetry';
 
 /**
  * RootLayout — the single shared app shell: a quiet header (guide name as a
@@ -23,13 +24,15 @@ export function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Umami beacon: injected once per document from the app shell's mount
-  // effect. Idempotent (StrictMode's dev double-mount and remounts never
-  // stack a second script) and a complete no-op when the env vars are
-  // unset — dev, test, and CI builds without the build args never see a
-  // script tag.
+  // Self-hosted analytics beacon (Umami — see ui/analytics/analytics.ts)
+  // and the Faro crash-telemetry beacon (see
+  // ui/analytics/crash-telemetry.ts): shell-level so they load once per
+  // document for EVERY route. A no-op unless the build baked both
+  // VITE_UMAMI_* / VITE_FARO_* vars in; the loaders' idempotence guards
+  // absorb StrictMode's dev double-mount.
   useEffect(() => {
     initAnalytics();
+    initCrashTelemetry();
   }, []);
 
   // The back arrow is hidden exactly on home; every other route (including

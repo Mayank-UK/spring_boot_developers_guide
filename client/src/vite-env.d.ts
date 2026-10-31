@@ -17,6 +17,13 @@ interface ImportMetaEnv {
    */
   readonly VITE_UMAMI_SRC?: string;
   readonly VITE_UMAMI_ID?: string;
+  /**
+   * Grafana Faro crash telemetry (see src/ui/analytics/crash-telemetry.ts)
+   * — same PUBLIC-by-design discipline: both unset/empty means no script
+   * injected and no initialization, the complete no-op default.
+   */
+  readonly VITE_FARO_URL?: string;
+  readonly VITE_FARO_APP?: string;
 }
 
 interface ImportMeta {
